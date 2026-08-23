@@ -1,0 +1,12 @@
+# 环境变量
+.env
+
+# 数据与缓存（保留目录结构，忽略大文件）
+data/fits_raw/*.fits
+data/app.db
+data/app.db-journal
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+.pytest_cache/
