@@ -1,8 +1,9 @@
-// 星表页（层级一 · 全景）：筛选器 + 搜索框 + 星场 + 行星详情弹窗
+// 星表页（层级一 · 全景）：筛选器 + 搜索框 + 3D 探索星场 + 行星详情弹窗
+// 3D 视图：OrbitControls 拖拽旋转 / 滚轮推拉缩放 / 右键平移，点击星球飞近并打开详情
 // 全量数据到达后，筛选逻辑只需把数据源从 keyPlanets 换成后端 JSON 即可
 
 import { useMemo, useState } from 'react'
-import StarField, { CatalogFilter } from '../components/StarField'
+import Catalog3D, { CatalogFilter } from '../components/Catalog3D'
 import PlanetDetailModal from '../components/PlanetDetailModal'
 import { keyPlanets, PlanetData } from '../data/planets'
 import { THEME } from '../config/visuals'
@@ -32,7 +33,7 @@ export default function CatalogPage() {
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
-      <StarField
+      <Catalog3D
         filter={filter}
         searchQuery={searchQuery}
         selectedName={selected?.name ?? null}
@@ -140,16 +141,42 @@ export default function CatalogPage() {
       {/* 操作提示 */}
       <div style={{
         position: 'absolute',
-        bottom: 60,
+        bottom: 22,
         left: '50%',
         transform: 'translateX(-50%)',
         color: THEME.textFaint,
         fontSize: '0.7rem',
         letterSpacing: '0.1em',
         pointerEvents: 'none',
+        whiteSpace: 'nowrap',
       }}>
-        悬停查看信息 · 点击打开详情
+        拖拽旋转 · 滚轮推拉缩放 · 右键平移 · 点击星球查看档案
       </div>
+
+      {/* 回到总览（选中后出现） */}
+      {selected && (
+        <button
+          onClick={() => setSelected(null)}
+          style={{
+            position: 'absolute',
+            bottom: 56,
+            right: 28,
+            padding: '8px 16px',
+            background: THEME.panelBg,
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(186,198,232,0.3)',
+            borderRadius: 3,
+            color: THEME.textPrimary,
+            fontSize: '0.68rem',
+            letterSpacing: '0.2em',
+            fontFamily: THEME.monoFont,
+            cursor: 'pointer',
+            zIndex: 50,
+          }}
+        >
+          ⟲ 回到总览
+        </button>
+      )}
 
       {/* 详情弹窗 */}
       {selected && (

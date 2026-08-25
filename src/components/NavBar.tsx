@@ -6,7 +6,8 @@ import { useStarStore } from '../store/useStarStore'
 import { THEME } from '../config/visuals'
 
 const navItems = [
-  { path: '/', label: '星表', en: 'CATALOG' },
+  { path: '/', label: '旅程', en: 'JOURNEY' },
+  { path: '/catalog', label: '星表', en: 'CATALOG' },
   { path: '/galaxy', label: '星系', en: 'SYSTEMS' },
   { path: '/spectrum', label: '光谱', en: 'SPECTRA' },
   { path: '/evolution', label: '演化', en: 'EVOLUTION' },

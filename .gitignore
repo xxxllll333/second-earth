@@ -3,3 +3,7 @@ dist
 .DS_Store
 *.local
 *.tsbuildinfo
+
+# 验证截图与页面快照导出产物（脚本输出，不入库）
+figma-export/
+figma-html/

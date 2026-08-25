@@ -1,8 +1,9 @@
-// 应用路由：五个视图（星表 / 星系 / 光谱 / 演化 / 我的星表）
+// 应用路由：旅程首页 + 五个功能视图（星表 / 星系 / 光谱 / 演化 / 我的星表）
 // BrowserRouter 在 main.tsx 中包裹
 
 import { Routes, Route } from 'react-router-dom'
 import NavBar from './components/NavBar'
+import JourneyPage from './pages/JourneyPage'
 import CatalogPage from './pages/CatalogPage'
 import GalaxyPage from './pages/GalaxyPage'
 import SpectrumPage from './pages/SpectrumPage'
@@ -14,7 +15,8 @@ function App() {
     <>
       <NavBar />
       <Routes>
-        <Route path="/" element={<CatalogPage />} />
+        <Route path="/" element={<JourneyPage />} />
+        <Route path="/catalog" element={<CatalogPage />} />
         <Route path="/galaxy" element={<GalaxyPage />} />
         <Route path="/galaxy/:name" element={<GalaxyPage />} />
         <Route path="/spectrum" element={<SpectrumPage />} />

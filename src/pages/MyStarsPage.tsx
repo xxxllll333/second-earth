@@ -103,7 +103,7 @@ export default function MyStarsPage() {
           <div style={{ fontSize: '0.95rem', fontWeight: 300, letterSpacing: '0.1em', marginBottom: 6 }}>还没有收藏任何行星</div>
           <div style={{ fontSize: '0.76rem', marginBottom: 20 }}>去星表逛一逛，点亮你感兴趣的世界</div>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/catalog')}
             style={{
               padding: '10px 26px',
               borderRadius: 2,

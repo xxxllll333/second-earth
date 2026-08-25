@@ -1,0 +1,9 @@
+/* Jost 变量字体（100-900）：Futura 系几何无衬线，NASA 铭牌字体传统的继承者
+   本地加载，离线可用（Google Fonts 在国内不可达，不走 CDN） */
+@font-face {
+  font-family: 'Jost Variable';
+  src: url('../assets/fonts/jost-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}

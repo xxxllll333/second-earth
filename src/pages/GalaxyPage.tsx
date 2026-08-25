@@ -1,17 +1,18 @@
-// 星系视图页（层级二 · 中景）：行星轨道图（Canvas） + 参数雷达图（SVG）
+// 星系视图页（层级二 · 中景）：三栏工作台布局
+//   左栏：目标列表（分组缩略图 + 名字 + 状态标记）——点击任意目标，相机在空间内丝滑飞行到其所在星系并聚焦
+//   中间：3D 星系场景（恒星 + 轨道 + 程序化星球公转，拖拽旋转 / 滚轮缩放 / 点击星球）
+//   右栏：数据可视化面板（状态徽章 + 雷达图 + 指标条 + 发现信息）
 // 轨道半径按开普勒第三定律由周期推算：a ∝ period^(2/3)（假设恒星质量≈太阳）
-// 支持从路由参数 /galaxy/:name 指定行星，或页面内下拉切换
+// 支持从路由参数 /galaxy/:name 指定初始行星
 
-import { useEffect, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useParams } from 'react-router-dom'
 import { keyPlanets, PlanetData } from '../data/planets'
 import PageHeader from '../components/PageHeader'
+import StatusBadge from '../components/StatusBadge'
+import SystemView3D, { planetsOfSystem, systemOf } from '../components/SystemView3D'
 import { THEME } from '../config/visuals'
-
-// ── 轨道图参数 ──
-const ORBIT_SIZE = 560
-const CENTER = ORBIT_SIZE / 2
-const STAR_RADIUS = 26
 
 // ── 雷达图五维归一化（0~1） ──
 function radarValues(p: PlanetData): number[] {
@@ -26,101 +27,12 @@ function radarValues(p: PlanetData): number[] {
 
 const radarLabels = ['半径', '质量', '温度', '周期', 'ESI']
 
-// ── 轨道图 Canvas 组件 ──
-function OrbitCanvas({ planet }: { planet: PlanetData }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current!
-    const ctx = canvas.getContext('2d')!
-    const dpr = window.devicePixelRatio
-    canvas.width = ORBIT_SIZE * dpr
-    canvas.height = ORBIT_SIZE * dpr
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.clearRect(0, 0, ORBIT_SIZE, ORBIT_SIZE)
-
-    // 轨道半径：开普勒第三定律 a(AU) = period(年)^(2/3)
-    const periodYears = planet.period / 365.25
-    const orbitAU = Math.pow(periodYears, 2 / 3)
-    const maxAU = 6
-    const orbitR = 40 + (Math.min(orbitAU, maxAU) / maxAU) * (CENTER - 70)
-    const phase = (planet.period * 37) % 360 // 由周期决定固定相位角
-
-    // 网格同心圆（尺度参考）
-    for (let i = 1; i <= 3; i++) {
-      ctx.beginPath()
-      ctx.arc(CENTER, CENTER, (orbitR / 3) * i, 0, Math.PI * 2)
-      ctx.strokeStyle = 'rgba(255,255,255,0.06)'
-      ctx.lineWidth = 1
-      ctx.stroke()
-    }
-
-    // 中心恒星
-    const starGlow = ctx.createRadialGradient(CENTER, CENTER, 0, CENTER, CENTER, STAR_RADIUS * 3)
-    starGlow.addColorStop(0, 'rgba(255,220,130,0.9)')
-    starGlow.addColorStop(0.4, 'rgba(255,180,80,0.35)')
-    starGlow.addColorStop(1, 'rgba(255,180,80,0)')
-    ctx.beginPath()
-    ctx.arc(CENTER, CENTER, STAR_RADIUS * 3, 0, Math.PI * 2)
-    ctx.fillStyle = starGlow
-    ctx.fill()
-
-    ctx.beginPath()
-    ctx.arc(CENTER, CENTER, STAR_RADIUS, 0, Math.PI * 2)
-    ctx.fillStyle = '#ffd76e'
-    ctx.fill()
-
-    // 轨道椭圆（轻微倾斜增加立体感）
-    const tilt = 0.12
-    ctx.beginPath()
-    ctx.ellipse(CENTER, CENTER, orbitR, orbitR * (1 - tilt), -0.3, 0, Math.PI * 2)
-    ctx.strokeStyle = 'rgba(255,255,255,0.28)'
-    ctx.lineWidth = 1.5
-    ctx.stroke()
-
-    // 行星位置（椭圆轨道上）
-    const angle = (phase * Math.PI) / 180
-    const planetX = CENTER + orbitR * Math.cos(angle)
-    const planetY = CENTER + orbitR * (1 - tilt) * Math.sin(angle)
-
-    // 行星光点 + 光晕
-    const planetGlow = ctx.createRadialGradient(planetX, planetY, 0, planetX, planetY, 26)
-    planetGlow.addColorStop(0, planet.color + 'cc')
-    planetGlow.addColorStop(1, planet.color + '00')
-    ctx.beginPath()
-    ctx.arc(planetX, planetY, 26, 0, Math.PI * 2)
-    ctx.fillStyle = planetGlow
-    ctx.fill()
-
-    ctx.beginPath()
-    ctx.arc(planetX, planetY, 9, 0, Math.PI * 2)
-    ctx.fillStyle = planet.color
-    ctx.fill()
-
-    // 行星标签
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '12px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillText(planet.name, planetX, planetY - 18)
-    ctx.fillStyle = '#888899'
-    ctx.font = '10px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.fillText(`${orbitAU.toFixed(2)} AU`, planetX, planetY + 26)
-  }, [planet])
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ width: ORBIT_SIZE, height: ORBIT_SIZE, maxWidth: '100%' }}
-    />
-  )
-}
-
 // ── 雷达图 SVG 组件 ──
 function RadarChart({ planet }: { planet: PlanetData }) {
-  const size = 300
+  const size = 264
   const cx = size / 2
   const cy = size / 2
-  const maxR = size / 2 - 36
+  const maxR = size / 2 - 34
   const values = radarValues(planet)
 
   // 五边形顶点坐标
@@ -150,14 +62,14 @@ function RadarChart({ planet }: { planet: PlanetData }) {
 
   // 顶点标签
   const labelNodes = radarLabels.map((label, i) => {
-    const [x, y] = pointAt(i, maxR + 20)
+    const [x, y] = pointAt(i, maxR + 18)
     return (
       <text
         key={label}
         x={x}
         y={y}
         fill="#888899"
-        fontSize={11}
+        fontSize={10}
         textAnchor="middle"
         dominantBaseline="middle"
       >
@@ -181,16 +93,268 @@ function RadarChart({ planet }: { planet: PlanetData }) {
   )
 }
 
+// ── 指标条：左标签、右数值（等宽字体）、渐变填充条 ──
+function MetricBar({ label, display, pct, color }: { label: string; display: string; pct: number; color: string }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+        <span style={{ fontSize: '0.64rem', letterSpacing: '0.12em', color: THEME.textFaint }}>{label}</span>
+        <span className="mono" style={{ fontSize: '0.68rem', color: THEME.textSecondary }}>{display}</span>
+      </div>
+      <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+        <div
+          style={{
+            height: '100%',
+            width: `${Math.round(Math.max(pct, 0.02) * 100)}%`,
+            background: `linear-gradient(90deg, ${color}33, ${color})`,
+            borderRadius: 2,
+            transition: 'width 0.5s ease',
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ── 指标定义：归一化函数（对数压缩跨量级数据） ──
+const METRICS: { label: string; get: (p: PlanetData) => { display: string; pct: number } }[] = [
+  { label: '半径', get: p => ({ display: `${p.radius} R⊕`, pct: Math.min(Math.log10(p.radius + 1) / 1.3, 1) }) },
+  { label: '质量', get: p => ({ display: `${p.mass >= 100 ? Math.round(p.mass) : p.mass} M⊕`, pct: Math.min(Math.log10(p.mass + 1) / 3.6, 1) }) },
+  { label: '平衡温度', get: p => ({ display: `${Math.round(p.temp)} K`, pct: Math.min(p.temp / 2500, 1) }) },
+  { label: '轨道周期', get: p => ({ display: `${p.period} d`, pct: Math.min(Math.log10(p.period + 1) / 3, 1) }) },
+  { label: '距离', get: p => ({ display: `${p.distance} ly`, pct: Math.min(Math.log10(p.distance + 1) / 4, 1) }) },
+  { label: 'ESI 相似度', get: p => ({ display: p.esi.toFixed(2), pct: p.esi }) },
+]
+
+// ── 左栏分组（与星表页分类一致） ──
+const CATEGORY_EN: Record<PlanetData['category'], string> = {
+  '主角': 'FEATURED',
+  '候选宜居': 'HABITABLE CANDIDATES',
+  '已否决': 'REJECTED',
+  '一般': 'SPECTRAL TARGETS',
+}
+const CATEGORY_ORDER: PlanetData['category'][] = ['主角', '候选宜居', '已否决', '一般']
+
+// ── 左栏：目标列表 ──
+function TargetSidebar({ selectedName, onSelect }: { selectedName: string; onSelect: (name: string) => void }) {
+  const groups = useMemo(
+    () => CATEGORY_ORDER.map(cat => ({ cat, planets: keyPlanets.filter(p => p.category === cat) })),
+    [],
+  )
+
+  return (
+    <div style={{
+      width: 248,
+      flexShrink: 0,
+      height: 660,
+      border: `1px solid ${THEME.panelBorder}`,
+      borderRadius: 10,
+      background: 'rgba(255,255,255,0.015)',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* 栏头 */}
+      <div style={{
+        padding: '12px 16px',
+        borderBottom: `1px solid ${THEME.panelBorder}`,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
+        <span className="mono" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: THEME.textSecondary }}>
+          TARGETS
+        </span>
+        <span className="mono" style={{ fontSize: '0.56rem', color: THEME.textFaint }}>
+          {keyPlanets.length} BODIES
+        </span>
+      </div>
+
+      {/* 分组列表 */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {groups.map(g => (
+          <div key={g.cat}>
+            <div
+              className="mono"
+              style={{ padding: '14px 16px 6px', fontSize: '0.54rem', letterSpacing: '0.26em', color: THEME.textFaint }}
+            >
+              {CATEGORY_EN[g.cat]}
+            </div>
+            {g.planets.map(p => {
+              const selected = p.name === selectedName
+              return (
+                <motion.button
+                  key={p.name}
+                  onClick={() => onSelect(p.name)}
+                  animate={{ background: selected ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0)' }}
+                  whileHover={{ background: 'rgba(255,255,255,0.05)' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    width: '100%',
+                    padding: '9px 14px 9px 16px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    position: 'relative',
+                    color: selected ? THEME.textPrimary : THEME.textSecondary,
+                  }}
+                >
+                  {/* 选中指示红条 */}
+                  {selected && (
+                    <motion.div
+                      layoutId="target-active"
+                      style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 2, background: THEME.accentRed }}
+                    />
+                  )}
+                  {/* 色球缩略图：径向渐变模拟受光球面 */}
+                  <span
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      background: `radial-gradient(circle at 33% 30%, #ffffffcc, ${p.color} 46%, #000000 150%)`,
+                      boxShadow: `0 0 10px ${p.color}55`,
+                      opacity: p.isRejected ? 0.55 : 1,
+                    }}
+                  />
+                  <span style={{
+                    flex: 1,
+                    fontSize: '0.78rem',
+                    fontWeight: selected ? 400 : 300,
+                    letterSpacing: '0.05em',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {p.name}
+                  </span>
+                  {p.isRejected && (
+                    <span className="mono" style={{ color: THEME.accentRed, fontSize: '0.62rem' }}>✕</span>
+                  )}
+                  {p.isHabitable && !p.isRejected && (
+                    <span style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      background: THEME.accentGreen,
+                      boxShadow: `0 0 5px ${THEME.accentGreen}`,
+                    }} />
+                  )}
+                </motion.button>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── 右栏：数据可视化面板 ──
+function DataPanel({ planet }: { planet: PlanetData }) {
+  return (
+    <div style={{
+      width: 320,
+      flexShrink: 0,
+      height: 660,
+      border: `1px solid ${THEME.panelBorder}`,
+      borderRadius: 10,
+      background: 'rgba(255,255,255,0.015)',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* 内容随选中行星切换做淡入过渡 */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={planet.name}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.28 }}
+          style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+        >
+          {/* 头部：类别微标签 + 行星名 + 状态徽章 */}
+          <div style={{ padding: '16px 20px 12px', borderBottom: `1px solid ${THEME.panelBorder}` }}>
+            <div className="mono" style={{ fontSize: '0.56rem', letterSpacing: '0.32em', color: planet.color }}>
+              {CATEGORY_EN[planet.category]}
+            </div>
+            <div style={{ fontSize: '1.28rem', fontWeight: 200, letterSpacing: '0.12em', marginTop: 5 }}>
+              {planet.name}
+            </div>
+            <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <StatusBadge planet={planet} compact />
+              {planet.hasSpectrum && (
+                <span
+                  className="mono"
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 3,
+                    border: `1px solid ${THEME.accentBlue}44`,
+                    background: `${THEME.accentBlue}0d`,
+                    fontSize: '0.6rem',
+                    letterSpacing: '0.06em',
+                    color: THEME.accentBlue,
+                  }}
+                >
+                  光谱档案
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* 雷达图 */}
+          <div style={{ padding: '8px 0 2px', display: 'flex', justifyContent: 'center' }}>
+            <RadarChart planet={planet} />
+          </div>
+
+          {/* 指标条 */}
+          <div style={{ padding: '0 20px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {METRICS.map(m => {
+              const { display, pct } = m.get(planet)
+              return <MetricBar key={m.label} label={m.label} display={display} pct={pct} color={planet.color} />
+            })}
+          </div>
+
+          {/* 底部：发现信息 + 状态标记 */}
+          <div className="mono" style={{
+            marginTop: 'auto',
+            padding: '11px 20px',
+            borderTop: `1px solid ${THEME.panelBorder}`,
+            fontSize: '0.62rem',
+            letterSpacing: '0.06em',
+            color: THEME.textFaint,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <span>{planet.discoveryYear} · {planet.discoveryMethod}</span>
+            <span style={{ color: planet.isRejected ? THEME.accentRed : planet.isHabitable ? THEME.accentGreen : THEME.textFaint }}>
+              {planet.isRejected ? '已否决' : planet.isHabitable ? '宜居带' : planet.hasSpectrum ? '有光谱' : ''}
+            </span>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
 export default function GalaxyPage() {
   const { name } = useParams()
   const initial = keyPlanets.find(p => p.name === name) ?? keyPlanets[0]
   const [selectedName, setSelectedName] = useState(initial.name)
   const planet = keyPlanets.find(p => p.name === selectedName) ?? keyPlanets[0]
+  const systemPlanets = useMemo(() => planetsOfSystem(planet.name), [planet.name])
 
   return (
     <div style={{
       minHeight: '100vh',
       paddingTop: 76,
+      paddingBottom: 48,
       background: THEME.bg,
       color: THEME.textPrimary,
       display: 'flex',
@@ -200,52 +364,61 @@ export default function GalaxyPage() {
       <PageHeader
         enLabel="Planetary Systems"
         title="星系视图"
-        subtitle="轨道尺度按开普勒定律由周期推算 · 演示数据"
+        subtitle="点击左侧目标，飞向它的星系 · 拖拽旋转 · 滚轮缩放"
       />
 
-      {/* 行星选择器 */}
-      <select
-        value={selectedName}
-        onChange={e => setSelectedName(e.target.value)}
-        style={{
-          padding: '8px 16px',
-          borderRadius: 4,
-          border: '1px solid rgba(255,255,255,0.12)',
-          background: '#0d0e16',
-          color: THEME.textPrimary,
-          fontSize: '0.82rem',
-          fontWeight: 300,
-          letterSpacing: '0.06em',
-          marginBottom: 22,
-          outline: 'none',
-        }}
-      >
-        {keyPlanets.map(p => (
-          <option key={p.name} value={p.name}>{p.name}</option>
-        ))}
-      </select>
+      {/* 三栏工作台 */}
+      <div style={{
+        display: 'flex',
+        gap: 18,
+        width: 1360,
+        maxWidth: '97vw',
+        alignItems: 'stretch',
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+      }}>
+        {/* 左：目标列表 */}
+        <TargetSidebar selectedName={selectedName} onSelect={setSelectedName} />
 
-      <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
-        {/* 左：轨道图 */}
+        {/* 中：3D 星系场景 */}
         <div style={{
-          background: 'rgba(255,255,255,0.015)',
+          flex: '1 1 620px',
+          minWidth: 560,
+          maxWidth: 780,
+          height: 660,
           border: `1px solid ${THEME.panelBorder}`,
           borderRadius: 10,
-          padding: 16,
+          overflow: 'hidden',
+          position: 'relative',
+          background: '#04050a',
         }}>
-          <OrbitCanvas planet={planet} />
+          <SystemView3D planets={systemPlanets} selectedName={selectedName} onSelect={setSelectedName} />
+
+          {/* 场景内信息 overlay：当前系统 + 聚焦目标 */}
+          <div style={{ position: 'absolute', top: 14, left: 16, zIndex: 10, pointerEvents: 'none' }}>
+            <div className="mono" style={{ fontSize: '0.62rem', letterSpacing: '0.3em', color: THEME.textSecondary }}>
+              {systemOf(planet.name)}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: THEME.textFaint, marginTop: 3, letterSpacing: '0.08em' }}>
+              {systemPlanets.length} 颗已知行星 · 聚焦 {planet.name}
+            </div>
+          </div>
+          <div style={{
+            position: 'absolute',
+            bottom: 12,
+            left: 16,
+            zIndex: 10,
+            pointerEvents: 'none',
+            fontSize: '0.62rem',
+            letterSpacing: '0.1em',
+            color: THEME.textFaint,
+          }}>
+            拖拽旋转 · 滚轮缩放 · 点击星球切换
+          </div>
         </div>
 
-        {/* 右：雷达图 + 参数 */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          <div style={{ color: THEME.textPrimary, fontSize: '0.95rem', fontWeight: 300, letterSpacing: '0.1em' }}>
-            {planet.name}
-          </div>
-          <RadarChart planet={planet} />
-          <div className="mono" style={{ color: THEME.textFaint, fontSize: '0.68rem' }}>
-            {planet.discoveryYear} · {planet.discoveryMethod}
-          </div>
-        </div>
+        {/* 右：数据可视化 */}
+        <DataPanel planet={planet} />
       </div>
     </div>
   )

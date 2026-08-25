@@ -22,18 +22,22 @@ export interface PlanetData {
   hasSpectrum: boolean
   isRejected: boolean
   category: '主角' | '候选宜居' | '已否决' | '一般'
+  // ── 叙事状态（旅程页状态徽章 + 我的星表回访共用）──
+  status?: 'stable' | 'disputed' | 'rejected'  // 稳健 / 争议中 / 已否决
+  statusNote?: string   // 状态说明，如 "2025 JWST 证实无大气层"
+  lastUpdated?: string  // 数据更新至，如 "2026.08"
 }
 
 export const keyPlanets: PlanetData[] = [
   // ── 主角行星 ──
-  { name: 'K2-18b',     radius: 2.37, mass: 8.92,   temp: 272,  distance: 124,  period: 32.94,  esi: 0.73, discoveryYear: 2015, discoveryMethod: '凌星法',   color: '#4488cc', isHabitable: true,  hasSpectrum: true,  isRejected: false, category: '主角' },
-  { name: 'TRAPPIST-1e', radius: 0.92, mass: 0.69,  temp: 251,  distance: 39,   period: 6.10,   esi: 0.85, discoveryYear: 2017, discoveryMethod: '凌星法',   color: '#44cc88', isHabitable: true,  hasSpectrum: true,  isRejected: false, category: '候选宜居' },
+  { name: 'K2-18b',     radius: 2.37, mass: 8.92,   temp: 272,  distance: 124,  period: 32.94,  esi: 0.73, discoveryYear: 2015, discoveryMethod: '凌星法',   color: '#4488cc', isHabitable: true,  hasSpectrum: true,  isRejected: false, category: '主角', status: 'disputed', statusNote: 'DMS 信号待复测', lastUpdated: '2026.08' },
+  { name: 'TRAPPIST-1e', radius: 0.92, mass: 0.69,  temp: 251,  distance: 39,   period: 6.10,   esi: 0.85, discoveryYear: 2017, discoveryMethod: '凌星法',   color: '#44cc88', isHabitable: true,  hasSpectrum: true,  isRejected: false, category: '候选宜居', status: 'stable', statusNote: 'JWST 大气观测进行中', lastUpdated: '2026.07' },
   { name: 'TRAPPIST-1f', radius: 1.04, mass: 0.68,  temp: 219,  distance: 39,   period: 9.21,   esi: 0.68, discoveryYear: 2017, discoveryMethod: '凌星法',   color: '#66ccaa', isHabitable: true,  hasSpectrum: true,  isRejected: false, category: '候选宜居' },
   { name: 'TRAPPIST-1g', radius: 1.13, mass: 1.34,  temp: 199,  distance: 39,   period: 12.35,  esi: 0.58, discoveryYear: 2017, discoveryMethod: '凌星法',   color: '#88ddcc', isHabitable: true,  hasSpectrum: false, isRejected: false, category: '候选宜居' },
-  { name: 'WD 1856b',   radius: 10.0, mass: 4387,  temp: 163,  distance: 80,   period: 1.41,   esi: 0.00, discoveryYear: 2020, discoveryMethod: '凌星法',   color: '#cc8844', isHabitable: false, hasSpectrum: true,  isRejected: false, category: '主角' },
+  { name: 'WD 1856b',   radius: 10.0, mass: 4387,  temp: 163,  distance: 80,   period: 1.41,   esi: 0.00, discoveryYear: 2020, discoveryMethod: '凌星法',   color: '#cc8844', isHabitable: false, hasSpectrum: true,  isRejected: false, category: '主角', status: 'disputed', statusNote: '形成机制未解', lastUpdated: '2026.05' },
 
   // ── 已否决 ──
-  { name: 'TRAPPIST-1d', radius: 0.77, mass: 0.39,  temp: 286,  distance: 39,   period: 4.05,   esi: 0.90, discoveryYear: 2016, discoveryMethod: '凌星法',   color: '#666666', isHabitable: false, hasSpectrum: true,  isRejected: true,  category: '已否决' },
+  { name: 'TRAPPIST-1d', radius: 0.77, mass: 0.39,  temp: 286,  distance: 39,   period: 4.05,   esi: 0.90, discoveryYear: 2016, discoveryMethod: '凌星法',   color: '#666666', isHabitable: false, hasSpectrum: true,  isRejected: true,  category: '已否决', status: 'rejected', statusNote: '2025 JWST 证实无大气层', lastUpdated: '2025.12' },
   { name: 'TRAPPIST-1b', radius: 1.09, mass: 1.37,  temp: 400,  distance: 39,   period: 1.51,   esi: 0.50, discoveryYear: 2016, discoveryMethod: '凌星法',   color: '#555555', isHabitable: false, hasSpectrum: true,  isRejected: true,  category: '已否决' },
   { name: 'TRAPPIST-1c', radius: 1.06, mass: 1.31,  temp: 342,  distance: 39,   period: 2.42,   esi: 0.60, discoveryYear: 2016, discoveryMethod: '凌星法',   color: '#555555', isHabitable: false, hasSpectrum: true,  isRejected: true,  category: '已否决' },
 
@@ -45,7 +49,7 @@ export const keyPlanets: PlanetData[] = [
   { name: 'Kepler-452b', radius: 1.63, mass: 5.00,  temp: 265,  distance: 1400, period: 384.84, esi: 0.83, discoveryYear: 2015, discoveryMethod: '凌星法',   color: '#559988', isHabitable: true,  hasSpectrum: false, isRejected: false, category: '候选宜居' },
 
   // ── 有光谱数据 ──
-  { name: 'WASP-96b',   radius: 12.0, mass: 153,   temp: 1285, distance: 1150, period: 3.43,   esi: 0.00, discoveryYear: 2013, discoveryMethod: '凌星法',   color: '#ff8844', isHabitable: false, hasSpectrum: true,  isRejected: false, category: '一般' },
+  { name: 'WASP-96b',   radius: 12.0, mass: 153,   temp: 1285, distance: 1150, period: 3.43,   esi: 0.00, discoveryYear: 2013, discoveryMethod: '凌星法',   color: '#ff8844', isHabitable: false, hasSpectrum: true,  isRejected: false, category: '一般', status: 'stable', statusNote: '韦伯首张系外行星光谱 · 2022', lastUpdated: '2026.06' },
   { name: 'WASP-39b',   radius: 12.7, mass: 89,    temp: 1173, distance: 700,  period: 4.06,   esi: 0.00, discoveryYear: 2011, discoveryMethod: '凌星法',   color: '#ff9944', isHabitable: false, hasSpectrum: true,  isRejected: false, category: '一般' },
   { name: 'HD 189733b', radius: 11.4, mass: 363,   temp: 1200, distance: 63,   period: 2.22,   esi: 0.00, discoveryYear: 2005, discoveryMethod: '凌星法',   color: '#ff6633', isHabitable: false, hasSpectrum: true,  isRejected: false, category: '一般' },
   { name: 'GJ 1214b',   radius:  2.68, mass: 8.17, temp: 393,  distance: 48,   period: 1.58,   esi: 0.40, discoveryYear: 2009, discoveryMethod: '凌星法',   color: '#cc7744', isHabitable: false, hasSpectrum: true,  isRejected: false, category: '一般' },
