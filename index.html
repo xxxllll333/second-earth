@@ -3,10 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>第二地球 · 系外行星图鉴</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { background: #0A0A0F; color: #ffffff; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+      html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+      body {
+        background: #06070B;
+        color: #f2f2f5;
+        font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+        font-weight: 300;
+      }
+      /* 等宽字体：数据标注用，营造"仪器读数"感 */
+      .mono {
+        font-family: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+        letter-spacing: 0.02em;
+      }
+      /* 滚动条：深色细条 */
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      ::-webkit-scrollbar-track { background: #06070B; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.26); }
+      /* 滑块通用样式 */
+      input[type='range'] { cursor: pointer; }
     </style>
   </head>
   <body>
