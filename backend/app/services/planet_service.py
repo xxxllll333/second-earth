@@ -1,4 +1,3 @@
-# 文件路径：app/services/planet_service.py
 from typing import Optional, List, Dict, Any
 
 # 基于提案文档重点目标的 Mock 科学数据集
