@@ -69,3 +69,47 @@ export const keyPlanets: PlanetData[] = [
   { name: 'HD 209458b', radius: 13.8, mass: 219,   temp: 1130, distance: 153,  period: 3.52,   esi: 0.00, discoveryYear: 1999, discoveryMethod: '凌星法',   color: '#ff7744', isHabitable: false, hasSpectrum: true,  isRejected: false, category: '一般' },
   { name: 'Kepler-7b',  radius: 16.6, mass: 137,   temp: 1630, distance: 3160, period: 4.89,   esi: 0.00, discoveryYear: 2010, discoveryMethod: '凌星法',   color: '#ff6633', isHabitable: false, hasSpectrum: false, isRejected: false, category: '一般' },
 ]
+
+// ── 地球基准：不进入 keyPlanets（地球是参照系而非系外行星），供“与地球对比”可视化使用 ──
+export const EARTH: PlanetData = {
+  name: '地球', radius: 1, mass: 1, temp: 288, distance: 0, period: 365.25, esi: 1,
+  discoveryYear: 0, discoveryMethod: '—', color: '#4a9ad8',
+  isHabitable: true, hasSpectrum: true, isRejected: false, category: '一般',
+}
+
+// ── 寄主恒星参数（键为 systemOf 后的系统名；光度/温度/质量为近似值，用于科普级宜居带计算）──
+export const starParams: Record<string, { luminosity: number; temp: number; mass: number; spectral: string }> = {
+  'TRAPPIST-1': { luminosity: 0.00052, temp: 2566, mass: 0.09,   spectral: 'M8V' },
+  'K2-18':      { luminosity: 0.0234,  temp: 3457, mass: 0.495,  spectral: 'M2.5V' },
+  'WD 1856':    { luminosity: 0.0005,  temp: 6200, mass: 0.518,  spectral: '白矮星' },
+  'LHS 1140':   { luminosity: 0.0039,  temp: 3131, mass: 0.184,  spectral: 'M4.5V' },
+  'Proxima':    { luminosity: 0.0017,  temp: 2992, mass: 0.12,   spectral: 'M5.5V' },
+  'TOI-700':    { luminosity: 0.0233,  temp: 3480, mass: 0.416,  spectral: 'M2.5V' },
+  'GJ 1061':    { luminosity: 0.0017,  temp: 2953, mass: 0.113,  spectral: 'M5.5V' },
+  'Kepler-452': { luminosity: 1.11,    temp: 5757, mass: 1.04,   spectral: 'G2V' },
+  'WASP-96':    { luminosity: 0.9,     temp: 5540, mass: 1.06,   spectral: 'G8V' },
+  'WASP-39':    { luminosity: 1.0,     temp: 5400, mass: 0.93,   spectral: 'G8V' },
+  'HD 189733':  { luminosity: 0.328,   temp: 5052, mass: 0.8,    spectral: 'K1.5V' },
+  'GJ 1214':    { luminosity: 0.0033,  temp: 3026, mass: 0.15,   spectral: 'M4.5V' },
+  'LTT 9779':   { luminosity: 1.1,     temp: 5445, mass: 1.02,   spectral: 'G7V' },
+  '55 Cnc':     { luminosity: 0.58,    temp: 5196, mass: 0.96,   spectral: 'K0IV' },
+  'GJ 667C':    { luminosity: 0.0137,  temp: 3350, mass: 0.33,   spectral: 'M1.5V' },
+  'Kepler-186': { luminosity: 0.0412,  temp: 3755, mass: 0.544,  spectral: 'M1V' },
+  'Ross 128':   { luminosity: 0.0036,  temp: 3192, mass: 0.168,  spectral: 'M4V' },
+  'Teegarden':  { luminosity: 0.00073, temp: 2904, mass: 0.097,  spectral: 'M7V' },
+  'GJ 1002':    { luminosity: 0.0012,  temp: 3024, mass: 0.12,   spectral: 'M5.5V' },
+  'WASP-12':    { luminosity: 3.4,     temp: 6360, mass: 1.43,   spectral: 'G0V' },
+  'WASP-17':    { luminosity: 2.7,     temp: 6550, mass: 1.2,    spectral: 'F6V' },
+  'HD 209458':  { luminosity: 1.79,    temp: 6091, mass: 1.15,   spectral: 'G0V' },
+  'Kepler-7':   { luminosity: 2.2,     temp: 5933, mass: 1.36,   spectral: 'G0V' },
+}
+
+// ── 宜居带内外边界（AU）：Kopparapu 2013 保守边界近似，内外边界 ∝ √光度 ──
+export function habitableZone(luminosity: number): { inner: number; outer: number } {
+  return { inner: 0.9 * Math.sqrt(luminosity), outer: 1.7 * Math.sqrt(luminosity) }
+}
+
+// ── 轨道半长轴（AU）：开普勒第三定律 a = (P/年)^(2/3) × M^(1/3)，M 为恒星质量（太阳质量）──
+export function orbitAU(period: number, mass = 1): number {
+  return Math.pow(period / 365.25, 2 / 3) * Math.pow(mass, 1 / 3)
+}

@@ -9,6 +9,7 @@ import GalaxyPage from './pages/GalaxyPage'
 import SpectrumPage from './pages/SpectrumPage'
 import EvolutionPage from './pages/EvolutionPage'
 import MyStarsPage from './pages/MyStarsPage'
+import VizDemoPage from './pages/VizDemoPage'
 
 function App() {
   return (
@@ -23,6 +24,8 @@ function App() {
         <Route path="/spectrum/:name" element={<SpectrumPage />} />
         <Route path="/evolution" element={<EvolutionPage />} />
         <Route path="/mystars" element={<MyStarsPage />} />
+        {/* 临时：可视化组件试验场（评估外部可视化库效果，可删除） */}
+        <Route path="/viz-demo" element={<VizDemoPage />} />
       </Routes>
     </>
   )

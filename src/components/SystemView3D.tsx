@@ -10,7 +10,7 @@ import { EffectComposer, Bloom, Vignette, Noise, ToneMapping } from '@react-thre
 import { ToneMappingMode } from 'postprocessing'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import { keyPlanets, PlanetData } from '../data/planets'
+import { keyPlanets, PlanetData, starParams, habitableZone, orbitAU } from '../data/planets'
 import {
   seededRandom, ballRadius, labelColor, proceduralStyleFor,
   glowTexture, spikeTexture, ProceduralPlanet,
@@ -31,37 +31,56 @@ export function planetsOfSystem(name: string): PlanetData[] {
   return keyPlanets.filter((p) => systemOf(p.name) === sys)
 }
 
-// ── 恒星颜色：红矮星偏橙红，其余按系统名散列暖黄白 ──
+// ── 恒星颜色：按恒星有效温度分段（M 红矮星橙红 → G 黄白 → 白矮星/蓝白）──
 function starColorFor(systemName: string): string {
-  if (systemName.startsWith('TRAPPIST')) return '#ffb37a' // 超冷红矮星
+  const sp = starParams[systemName.trim()]
+  if (sp) {
+    const t = sp.temp
+    if (t < 3200) return '#ff9a5a' // M 型红矮星
+    if (t < 4000) return '#ffb37a'
+    if (t < 5200) return '#ffc98a' // K 型
+    if (t < 6200) return '#ffe3b8' // G 型
+    return '#e8efff' // 白矮星 / F 型
+  }
   const r = seededRandom(systemName)()
   return r < 0.4 ? '#ffd9a6' : r < 0.7 ? '#ffc98a' : '#ffe3b8'
 }
 
-// ── 轨道参数：开普勒第三定律 a ∝ period^(2/3)，系统内归一化 ──
+// ── 轨道参数：开普勒第三定律 a ∝ period^(2/3)，系统内归一化；宜居带环同比例映射 ──
 interface OrbitParam {
   planet: PlanetData
   orbitR: number  // 轨道半径（世界单位）
+  inHZ: boolean   // 轨道是否落在宜居带内（说理：为何宜居/为何不满足）
   phase0: number  // 初始相位角
   omega: number   // 公转角速度
   radius: number  // 行星视觉半径
 }
 
-function orbitParams(planets: PlanetData[]): OrbitParam[] {
-  const aus = planets.map((p) => ({ p, a: Math.pow(p.period / 365.25, 2 / 3) }))
-  const maxA = Math.max(...aus.map((x) => x.a))
-  const multi = aus.length > 1
-  return aus.map(({ p, a }) => {
-    const orbitR = multi ? 3.2 + (a / maxA) * 4.8 : 4.2
+function buildScene(planets: PlanetData[]): { params: OrbitParam[]; hz: { inner: number; outer: number } } {
+  const sys = systemOf(planets[0]?.name ?? '').trim()
+  const sp = starParams[sys]
+  const lum = sp?.luminosity ?? 1
+  const hzAU = habitableZone(lum)
+  const aus = planets.map((p) => ({ p, a: orbitAU(p.period, sp?.mass ?? 1) }))
+  const maxA = Math.max(...aus.map((x) => x.a), hzAU.outer)
+  const multi = planets.length > 1
+  const toWorld = (a: number) => (multi ? 3.2 + (a / maxA) * 4.8 : (4.2 / Math.max(aus[0]?.a ?? 1, 1e-6)) * a)
+  const params = aus.map(({ p, a }) => {
     const rand = seededRandom(p.name)
     return {
       planet: p,
-      orbitR,
+      orbitR: toWorld(a),
+      inHZ: a >= hzAU.inner && a <= hzAU.outer,
       phase0: rand() * Math.PI * 2,
       omega: 1.2 / p.period,
       radius: ballRadius(p) * 0.62,
     }
   })
+  const hz = {
+    inner: Math.min(Math.max(toWorld(hzAU.inner), 0.5), 13),
+    outer: Math.min(Math.max(toWorld(hzAU.outer), 1.0), 13),
+  }
+  return { params, hz }
 }
 
 // ── 深空星点背景 ──
@@ -119,15 +138,15 @@ function CentralStar({ color }: { color: string }) {
   )
 }
 
-// ── 轨道环 ──
-function OrbitRing({ radius, highlight }: { radius: number; highlight: boolean }) {
+// ── 轨道环：宜居带内绿色 / 带外白色（一眼看出轨道位置，对标 NASA Eyes on Exoplanets）──
+function OrbitRing({ radius, inHZ, highlight }: { radius: number; inHZ: boolean; highlight: boolean }) {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]}>
       <ringGeometry args={[radius - 0.014, radius + 0.014, 160]} />
       <meshBasicMaterial
-        color={highlight ? '#6ee1a0' : '#8fa0cc'}
+        color={highlight ? '#6ee1a0' : inHZ ? '#6ee1a0' : '#e8ecf7'}
         transparent
-        opacity={highlight ? 0.5 : 0.14}
+        opacity={highlight ? 0.5 : inHZ ? 0.22 : 0.16}
         side={THREE.DoubleSide}
         depthWrite={false}
       />
@@ -325,7 +344,8 @@ interface SystemView3DProps {
 export default function SystemView3D({ planets, selectedName, onSelect }: SystemView3DProps) {
   const [focus, setFocus] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
-  const params = useMemo(() => orbitParams(planets), [planets])
+  const scene = useMemo(() => buildScene(planets), [planets])
+  const params = scene.params
   const sunPos = useMemo(() => new THREE.Vector3(0, 0, 0), [])
   const starColor = useMemo(() => starColorFor(systemOf(planets[0]?.name ?? '')), [planets])
   const firstRef = useRef(true) // 初次挂载不聚焦，先展示星系全貌
@@ -354,7 +374,7 @@ export default function SystemView3D({ planets, selectedName, onSelect }: System
         <CentralStar color={starColor} />
 
         {params.map((p) => (
-          <OrbitRing key={`ring-${p.planet.name}`} radius={p.orbitR} highlight={selectedName === p.planet.name} />
+          <OrbitRing key={`ring-${p.planet.name}`} radius={p.orbitR} inHZ={p.inHZ} highlight={selectedName === p.planet.name} />
         ))}
 
         {params.map((p) => (

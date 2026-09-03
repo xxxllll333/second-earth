@@ -72,7 +72,7 @@ async function canvasRect() {
 
 // ── 1. 初始：/galaxy/K2-18b ──
 console.log('→ goto /galaxy/K2-18b')
-await page.goto('http://localhost:5175/galaxy/K2-18b', { waitUntil: 'domcontentloaded', timeout: 60000 })
+await page.goto('http://localhost:5174/galaxy/K2-18b', { waitUntil: 'domcontentloaded', timeout: 60000 })
 await sleep(26000) // shader 编译
 
 await page.screenshot({ path: path.join(OUT, 'galaxy-v3-01-overview.png') })

@@ -7,3 +7,13 @@ dist
 # 验证截图与页面快照导出产物（脚本输出，不入库）
 figma-export/
 figma-html/
+.vercel
+.env*
+
+# Vercel 部署临时脚本（安装/登录/主机名补丁），仅本地使用，不入库
+.vercel-tmp/
+
+# 演示/临时产物（局域网二维码、SVG 预览页、临时脚本与图片），仅本地使用，不入库
+temp-*
+qr-access.*
+svg-preview.html
