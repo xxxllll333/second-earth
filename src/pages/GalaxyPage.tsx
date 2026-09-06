@@ -1,109 +1,29 @@
 // 星系视图页（层级二 · 中景）：三栏工作台布局
 //   左栏：目标列表（分组缩略图 + 名字 + 状态标记）——点击任意目标，相机在空间内丝滑飞行到其所在星系并聚焦
 //   中间：3D 星系场景（恒星 + 轨道 + 程序化星球公转，拖拽旋转 / 滚轮缩放 / 点击星球）
-//   右栏：数据可视化面板（状态徽章 + 雷达图 + 指标条 + 发现信息）
+//   右栏：数据可视化面板（状态徽章 + 宜居判决 + 指标条对比 + 发现信息）
 // 轨道半径按开普勒第三定律由周期推算：a ∝ period^(2/3)（假设恒星质量≈太阳）
 // 支持从路由参数 /galaxy/:name 指定初始行星
 
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useParams } from 'react-router-dom'
-import { keyPlanets, PlanetData, EARTH, starParams, habitableZone, orbitAU } from '../data/planets'
+import { keyPlanets, PlanetData, starParams, habitableZone, orbitAU } from '../data/planets'
 import PageHeader from '../components/PageHeader'
 import StatusBadge from '../components/StatusBadge'
 import SystemView3D, { planetsOfSystem, systemOf } from '../components/SystemView3D'
 import { THEME } from '../config/visuals'
+import { useIsMobile } from '../lib/useIsMobile'
+import EarthReference3D from '../components/EarthReference3D'
 
-// ── 雷达图五维归一化（0~1） ──
-function radarValues(p: PlanetData): number[] {
-  return [
-    Math.min(p.radius / 20, 1),                         // 半径
-    Math.min(Math.log10(Math.max(p.mass, 0.1) + 1) / 4, 1), // 质量（对数压缩）
-    Math.min(p.temp / 2500, 1),                         // 温度
-    Math.min(Math.log10(p.period + 1) / 3, 1),          // 轨道周期（对数压缩）
-    Math.min(p.esi, 1),                                 // 地球相似指数
-  ]
-}
-
-const radarLabels = ['半径', '质量', '温度', '周期', 'ESI']
-
-// ── 轨道行星仪表 SVG 组件（指标值 = 行星在弧形轨道上的位置，天文隐喻）──
-// 五条半圆弧轨道：行星值画成实色尾迹弧 + 行星点，地球基准为白色参考点（NASA 克制风，无发光）
-function OrbitGauges({ planet }: { planet: PlanetData }) {
-  const size = 240 // 宽（面板内宽 280，居中留边）
-  const height = 150 // 高（扁长：弧舒展、上方空白少）
-  const cx = size / 2
-  const cy = height - 16
-  const R0 = size / 2 - 30
-  const gap = R0 / radarLabels.length // 5 条弧间距 18px，舒展不拥挤
-  const values = radarValues(planet)
-  const earthVals = radarValues(EARTH)
-
-  const rad = (d: number) => (d * Math.PI) / 180
-  // 半圆弧（向上拱）：左端 180° 到右端 0°，sweep=0 经过上方
-  const arcPath = (r: number, fromDeg: number, toDeg: number) => {
-    const x1 = cx + r * Math.cos(rad(fromDeg))
-    const y1 = cy - r * Math.sin(rad(fromDeg))
-    const x2 = cx + r * Math.cos(rad(toDeg))
-    const y2 = cy - r * Math.sin(rad(toDeg))
-    const large = Math.abs(toDeg - fromDeg) > 180 ? 1 : 0
-    return `M${x1},${y1} A${r},${r} 0 ${large} 0 ${x2},${y2}`
-  }
-  // 值 0~1 → 弧上点（180° 左端 → 0° 右端）
-  const ptOn = (r: number, v: number): [number, number] => {
-    const deg = 180 - v * 180
-    return [cx + r * Math.cos(rad(deg)), cy - r * Math.sin(rad(deg))]
-  }
-
-  return (
-    <svg key={planet.name} width={size} height={height} viewBox={`0 0 ${size} ${height}`}>
-      {radarLabels.map((label, i) => {
-        const r = R0 - i * gap
-        const v = values[i] ?? 0
-        const ev = earthVals[i] ?? 0
-        const [kx, ky] = ptOn(r, v)
-        const [ex, ey] = ptOn(r, ev)
-        return (
-          <g key={label}>
-            {/* 底轨 */}
-            <path d={arcPath(r, 180, 0)} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
-            {/* 行星尾迹弧（左端 → 行星位置） */}
-            <motion.path
-              d={arcPath(r, 180, 180 - v * 180)}
-              fill="none"
-              stroke={planet.color}
-              strokeWidth={1.7}
-              strokeOpacity={0.85}
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1.1, ease: 'easeOut', delay: i * 0.07 }}
-            />
-            {/* 地球基准点（白色空心环，避免与行星点粘连混淆） */}
-            <circle cx={ex} cy={ey} r={2.6} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth={1.2} />
-            {/* 行星点（实色，无光晕） */}
-            <circle cx={kx} cy={ky} r={2.9} fill={planet.color} />
-            {/* 指标名：固定左端弧外（与数值永久分离，不随行星点移动） */}
-            <text x={cx - r - 7} y={cy} textAnchor="end" dominantBaseline="middle" fill="#888899" fontSize={8.5} letterSpacing={1}>
-              {label}
-            </text>
-            {/* 归一化值：固定右端弧外，与指标名对称 */}
-            <text x={cx + r + 8} y={cy} textAnchor="start" dominantBaseline="middle" fill="rgba(255,255,255,0.55)" fontSize={7.5} letterSpacing={0.3}>
-              {Math.round(v * 100)}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
-  )
-}
-
-// ── 指标条：左标签、右数值（等宽字体）、渐变填充条 + 地球基准刻度线 ──
+// ── 指标条：左标签、右数值（等宽字体）、渐变填充条 + 行星实点 + 地球基准刻度线 ──
+// 右栏唯一的“行星 vs 地球”对比视图（原弧线仪表信息重复且标签拥挤，已减法合并至此）
 function MetricBar({ label, display, pct, earthPct, color }: { label: string; display: string; pct: number; earthPct?: number; color: string }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
         <span style={{ fontSize: '0.6rem', letterSpacing: '0.1em', color: THEME.textFaint }}>{label}</span>
-        <span className="mono" style={{ fontSize: '0.64rem', color: THEME.textSecondary }}>{display}</span>
+        <span key={display} className="mono metric-value-swap" style={{ fontSize: '0.64rem', color: THEME.textSecondary }}>{display}</span>
       </div>
       <div style={{ position: 'relative', height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
         <div
@@ -115,7 +35,22 @@ function MetricBar({ label, display, pct, earthPct, color }: { label: string; di
             width: `${Math.round(Math.max(pct, 0.02) * 100)}%`,
             background: `linear-gradient(90deg, ${color}33, ${color})`,
             borderRadius: 2,
-            transition: 'width 0.5s ease',
+            transition: 'width 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
+          }}
+        />
+        {/* 行星实点：钉在填充末端，切星时随宽度滑动 + 微光 */}
+        <div
+          style={{
+            position: 'absolute',
+            left: `calc(${Math.round(Math.max(pct, 0.02) * 100)}% - 3.5px)`,
+            top: '50%',
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            transform: 'translateY(-50%)',
+            background: color,
+            boxShadow: `0 0 6px ${color}aa`,
+            transition: 'left 0.6s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease, box-shadow 0.4s ease',
           }}
         />
         {earthPct !== undefined && (
@@ -169,7 +104,7 @@ function TargetSidebar({ selectedName, onSelect }: { selectedName: string; onSel
       flexShrink: 0,
       height: 660,
       border: `1px solid ${THEME.panelBorder}`,
-      borderRadius: 10,
+      borderRadius: THEME.cardRadius,
       background: 'rgba(255,255,255,0.015)',
       overflow: 'hidden',
       display: 'flex',
@@ -197,7 +132,7 @@ function TargetSidebar({ selectedName, onSelect }: { selectedName: string; onSel
           <div key={g.cat}>
             <div
               className="mono"
-              style={{ padding: '14px 16px 6px', fontSize: '0.54rem', letterSpacing: '0.26em', color: THEME.textFaint }}
+              style={{ padding: '14px 16px 6px', fontSize: '0.62rem', letterSpacing: '0.16em', color: THEME.accentCyan, fontFamily: THEME.displayFont, textShadow: THEME.labelGlow }}
             >
               {CATEGORY_EN[g.cat]}
             </div>
@@ -222,11 +157,11 @@ function TargetSidebar({ selectedName, onSelect }: { selectedName: string; onSel
                     color: selected ? THEME.textPrimary : THEME.textSecondary,
                   }}
                 >
-                  {/* 选中指示红条 */}
+                  {/* 选中指示青条 */}
                   {selected && (
                     <motion.div
                       layoutId="target-active"
-                      style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 2, background: THEME.accentRed }}
+                      style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 2, background: THEME.accentCyan }}
                     />
                   )}
                   {/* 色球缩略图：径向渐变模拟受光球面 */}
@@ -243,6 +178,7 @@ function TargetSidebar({ selectedName, onSelect }: { selectedName: string; onSel
                   />
                   <span style={{
                     flex: 1,
+                    fontFamily: THEME.displayFont,
                     fontSize: '0.78rem',
                     fontWeight: selected ? 400 : 300,
                     letterSpacing: '0.05em',
@@ -271,6 +207,34 @@ function TargetSidebar({ selectedName, onSelect }: { selectedName: string; onSel
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+// ── 移动端：目标横向滚动 chips 条（交互与 3D 观看同屏）──
+function MobileTargetBar({ selectedName, onSelect }: { selectedName: string; onSelect: (name: string) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', width: '100%', padding: '2px 2px 12px', WebkitOverflowScrolling: 'touch' }}>
+      {keyPlanets.map(p => {
+        const selected = p.name === selectedName
+        return (
+          <button
+            key={p.name}
+            onClick={() => onSelect(p.name)}
+            style={{
+              flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 3, cursor: 'pointer',
+              background: selected ? 'rgba(32,235,243,0.12)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${selected ? THEME.accentCyan : THEME.panelBorder}`,
+              color: selected ? THEME.textPrimary : THEME.textSecondary,
+              fontFamily: THEME.displayFont, fontSize: '0.72rem', letterSpacing: '0.04em',
+            }}
+          >
+            <span style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: `radial-gradient(circle at 33% 30%, #ffffffcc, ${p.color} 46%, #000000 150%)` }} />
+            {p.name}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -374,14 +338,14 @@ function VerdictCard({ planet }: { planet: PlanetData }) {
 }
 
 // ── 右栏：数据可视化面板 ──
-function DataPanel({ planet }: { planet: PlanetData }) {
+function DataPanel({ planet, mobile }: { planet: PlanetData; mobile?: boolean }) {
   return (
     <div style={{
-      width: 320,
+      width: mobile ? '100%' : 320,
       flexShrink: 0,
-      height: 660,
+      height: mobile ? 'auto' : 660,
       border: `1px solid ${THEME.panelBorder}`,
-      borderRadius: 10,
+      borderRadius: THEME.cardRadius,
       background: 'rgba(255,255,255,0.015)',
       overflow: 'hidden',
       display: 'flex',
@@ -399,10 +363,10 @@ function DataPanel({ planet }: { planet: PlanetData }) {
         >
           {/* 头部：类别微标签 + 行星名 + 状态徽章 */}
           <div style={{ padding: '13px 20px 10px', borderBottom: `1px solid ${THEME.panelBorder}` }}>
-            <div className="mono" style={{ fontSize: '0.54rem', letterSpacing: '0.32em', color: planet.color }}>
+            <div className="mono" style={{ fontSize: '0.62rem', letterSpacing: '0.18em', color: THEME.accentCyan, fontFamily: THEME.displayFont, textShadow: THEME.labelGlow }}>
               {CATEGORY_EN[planet.category]}
             </div>
-            <div style={{ fontSize: '1.28rem', fontWeight: 200, letterSpacing: '0.12em', marginTop: 4 }}>
+            <div style={{ fontSize: '1.28rem', fontWeight: 200, letterSpacing: '0.12em', marginTop: 4, fontFamily: THEME.displayFont }}>
               {planet.name}
             </div>
             <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -426,31 +390,26 @@ function DataPanel({ planet }: { planet: PlanetData }) {
             </div>
           </div>
 
+          {/* 地球参照系：3D 真实比例球体对比——地球固定为尺，行星球半径 = 半径倍数 */}
+          <EarthReference3D planet={planet} />
+
           {/* 宜居判决卡：为什么宜居 / 为什么不满足 */}
           <div style={{ padding: '9px 0 0' }}>
             <VerdictCard planet={planet} />
           </div>
 
-          {/* 轨道行星仪表（行星 vs 地球基准） */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 0 }}>
-            <OrbitGauges planet={planet} />
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', columnGap: 14, rowGap: 5, fontSize: '0.56rem', color: THEME.textFaint, letterSpacing: '0.06em', marginTop: 2, padding: '0 14px' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 12, height: 2.5, background: planet.color, display: 'inline-block', flexShrink: 0 }} />
-                {planet.name}
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', border: '1.2px solid rgba(255,255,255,0.85)', display: 'inline-block', flexShrink: 0 }} />
-                地球基准
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 2, height: 9, background: 'rgba(255,255,255,0.8)', display: 'inline-block', flexShrink: 0 }} />
-                指标条地球刻度
-              </span>
-            </div>
+          {/* 指标条（两列 + 行星实点 + 地球基准刻度）：右栏唯一对比视图 */}
+          <div style={{
+            padding: '12px 20px 0', fontSize: '0.56rem', color: THEME.textFaint,
+            letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <span style={{
+              width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
+              background: planet.color, boxShadow: `0 0 5px ${planet.color}`,
+              display: 'inline-block', transition: 'background 0.4s ease, box-shadow 0.4s ease',
+            }} />
+            <span>= 本行星 · 白色刻度 = 地球基准</span>
           </div>
-
-          {/* 指标条（两列 + 地球基准刻度） */}
           <div style={{ padding: '8px 20px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '9px 16px' }}>
             {METRICS.map(m => {
               const { display, pct } = m.get(planet)
@@ -483,6 +442,7 @@ function DataPanel({ planet }: { planet: PlanetData }) {
 
 export default function GalaxyPage() {
   const { name } = useParams()
+  const isMobile = useIsMobile()
   const initial = keyPlanets.find(p => p.name === name) ?? keyPlanets[0]
   const [selectedName, setSelectedName] = useState(initial.name)
   const planet = keyPlanets.find(p => p.name === selectedName) ?? keyPlanets[0]
@@ -491,8 +451,10 @@ export default function GalaxyPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      paddingTop: 76,
-      paddingBottom: 48,
+      paddingTop: isMobile ? 64 : 76,
+      paddingBottom: isMobile ? 32 : 48,
+      paddingLeft: isMobile ? 12 : 0,
+      paddingRight: isMobile ? 12 : 0,
       background: THEME.bg,
       color: THEME.textPrimary,
       display: 'flex',
@@ -505,27 +467,32 @@ export default function GalaxyPage() {
         subtitle="点击左侧目标，飞向它的星系 · 拖拽旋转 · 滚轮缩放"
       />
 
-      {/* 三栏工作台 */}
+      {/* 移动端：目标 chips 横滚条（与 3D 同屏） */}
+      {isMobile && <MobileTargetBar selectedName={selectedName} onSelect={setSelectedName} />}
+
+      {/* 三栏工作台（移动端竖排堆叠） */}
       <div style={{
         display: 'flex',
-        gap: 18,
-        width: 1360,
+        gap: isMobile ? 12 : 18,
+        width: isMobile ? '100%' : THEME.contentWidth,
         maxWidth: '97vw',
+        flexDirection: isMobile ? 'column' : 'row',
         alignItems: 'stretch',
         justifyContent: 'center',
         flexWrap: 'wrap',
       }}>
-        {/* 左：目标列表 */}
-        <TargetSidebar selectedName={selectedName} onSelect={setSelectedName} />
+        {/* 左：目标列表（仅桌面） */}
+        {!isMobile && <TargetSidebar selectedName={selectedName} onSelect={setSelectedName} />}
 
         {/* 中：3D 星系场景 */}
         <div style={{
-          flex: '1 1 620px',
-          minWidth: 560,
-          maxWidth: 780,
-          height: 660,
+          flex: isMobile ? 'none' : '1 1 620px',
+          minWidth: isMobile ? 0 : 560,
+          maxWidth: isMobile ? '100%' : 780,
+          width: isMobile ? '100%' : undefined,
+          height: isMobile ? '46vh' : 660,
           border: `1px solid ${THEME.panelBorder}`,
-          borderRadius: 10,
+          borderRadius: THEME.cardRadius,
           overflow: 'hidden',
           position: 'relative',
           background: '#04050a',
@@ -560,7 +527,7 @@ export default function GalaxyPage() {
         </div>
 
         {/* 右：数据可视化 */}
-        <DataPanel planet={planet} />
+        <DataPanel planet={planet} mobile={isMobile} />
       </div>
     </div>
   )

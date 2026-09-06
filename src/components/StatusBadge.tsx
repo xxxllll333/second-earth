@@ -1,5 +1,6 @@
 // StatusBadge —— 数据状态徽章（旅程页行星卡 + 我的星表回访共用）
 // 三态：绿=稳健 / 黄=争议中 / 红=已否决，附"更新至 YYYY.MM"数据新鲜度钩子
+// 形态：状态色左竖条 + 横向淡出底色的遥测条（去圆角线框，与 NavBar 品牌竖条同语言）
 // 无 status 字段的行星不渲染（老数据向后兼容）
 import { PlanetData } from '../data/planets'
 
@@ -17,10 +18,9 @@ export default function StatusBadge({ planet, compact = false }: { planet: Plane
       display: 'inline-flex',
       alignItems: 'center',
       gap: 8,
-      padding: compact ? '4px 12px' : '6px 14px',
-      borderRadius: 3,
-      border: `1px solid ${t.color}44`,
-      background: `${t.color}0d`,
+      padding: compact ? '3px 10px' : '4px 12px',
+      borderLeft: `2px solid ${t.color}`,
+      background: `linear-gradient(90deg, ${t.color}14, transparent 82%)`,
       fontFamily: "'Cascadia Code', 'Consolas', monospace",
       fontSize: compact ? '0.62rem' : '0.68rem',
       letterSpacing: '0.06em',

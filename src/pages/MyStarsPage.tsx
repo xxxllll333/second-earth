@@ -4,10 +4,11 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { keyPlanets } from '../data/planets'
+import { keyPlanets, PLANET_BLURB } from '../data/planets'
 import { useStarStore } from '../store/useStarStore'
 import PageHeader from '../components/PageHeader'
 import { THEME } from '../config/visuals'
+import { useIsMobile } from '../lib/useIsMobile'
 
 // ── 模拟数据更新记录（回访机制原型） ──
 const fakeUpdates: Record<string, string> = {
@@ -16,6 +17,7 @@ const fakeUpdates: Record<string, string> = {
 
 export default function MyStarsPage() {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const favorites = useStarStore(s => s.favorites)
   const toggleFavorite = useStarStore(s => s.toggleFavorite)
   const [dismissed, setDismissed] = useState(false)
@@ -26,8 +28,10 @@ export default function MyStarsPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      paddingTop: 76,
-      paddingBottom: 40,
+      paddingTop: isMobile ? 64 : 76,
+      paddingBottom: isMobile ? 32 : 40,
+      paddingLeft: isMobile ? 14 : 0,
+      paddingRight: isMobile ? 14 : 0,
       background: THEME.bg,
       color: THEME.textPrimary,
       display: 'flex',
@@ -47,9 +51,10 @@ export default function MyStarsPage() {
           maxWidth: '92vw',
           display: 'flex',
           alignItems: 'center',
+          flexWrap: isMobile ? 'wrap' : 'nowrap',
           gap: 12,
           padding: '14px 18px',
-          borderRadius: 8,
+          borderRadius: THEME.cardRadius,
           border: '1px solid rgba(68,204,136,0.35)',
           background: 'rgba(68,204,136,0.08)',
           marginBottom: 22,
@@ -132,7 +137,7 @@ export default function MyStarsPage() {
         {favoritePlanets.map(p => (
           <div key={p.name} style={{
             padding: '16px 18px',
-            borderRadius: 8,
+            borderRadius: THEME.cardRadius,
             border: `1px solid ${THEME.panelBorder}`,
             background: 'rgba(255,255,255,0.02)',
             display: 'flex',
@@ -143,9 +148,9 @@ export default function MyStarsPage() {
               <div style={{
                 width: 22, height: 22, borderRadius: '50%',
                 background: p.color,
-                boxShadow: `0 0 12px ${p.color}`,
+                boxShadow: `0 0 8px ${p.color}`,
               }} />
-              <span style={{ fontSize: '0.92rem', fontWeight: 300, letterSpacing: '0.06em' }}>{p.name}</span>
+              <span style={{ fontSize: '0.92rem', fontWeight: 300, letterSpacing: '0.06em', fontFamily: THEME.displayFont }}>{p.name}</span>
               <span style={{
                 marginLeft: 'auto',
                 fontSize: '0.66rem',
@@ -159,6 +164,17 @@ export default function MyStarsPage() {
               {p.distance} ly · {p.temp} K · P {p.period} d
               {fakeUpdates[p.name] && <div style={{ color: THEME.accentGreen, marginTop: 2 }}>● 有新数据</div>}
             </div>
+
+            {/* 一句话描述：两行截断，事实与全站口径一致 */}
+            {PLANET_BLURB[p.name] && (
+              <p style={{
+                margin: 0, fontSize: '0.7rem', lineHeight: 1.7, fontWeight: 300,
+                color: THEME.textSecondary,
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+              }}>
+                {PLANET_BLURB[p.name]}
+              </p>
+            )}
 
             <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
               <button

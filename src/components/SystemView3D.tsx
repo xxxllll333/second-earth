@@ -11,6 +11,7 @@ import { ToneMappingMode } from 'postprocessing'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { keyPlanets, PlanetData, starParams, habitableZone, orbitAU } from '../data/planets'
+import { THEME } from '../config/visuals'
 import {
   seededRandom, ballRadius, labelColor, proceduralStyleFor,
   glowTexture, spikeTexture, ProceduralPlanet,
@@ -225,7 +226,7 @@ function OrbitingPlanet({
         >
           <div
             style={{
-              fontFamily: "'Cascadia Code', 'Consolas', monospace",
+              fontFamily: THEME.displayFont,
               fontSize: selected ? '0.68rem' : '0.56rem',
               letterSpacing: '0.06em',
               color: labelColor(planet),

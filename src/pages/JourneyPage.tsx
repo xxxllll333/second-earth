@@ -8,8 +8,9 @@ import { useNavigate } from 'react-router-dom'
 import { keyPlanets, PlanetData } from '../data/planets'
 import Planet3D, { PlanetBeat, PlanetTextureSet } from '../components/Planet3D'
 import StatusBadge from '../components/StatusBadge'
-import BgmPlayer from '../components/BgmPlayer'
+import CosmicBackground from '../components/CosmicBackground'
 import { THEME } from '../config/visuals'
+import { useIsMobile } from '../lib/useIsMobile'
 import earthDay from '../assets/textures/earth_day_4096.jpg'
 import earthClouds from '../assets/textures/earth_clouds_1024.png'
 import earthNormal from '../assets/textures/earth_normal_2048.jpg'
@@ -224,6 +225,7 @@ function BeatTimeline({ beats, active, onSelect }: {
 // ── 单颗行星故事章节：自动逐拍播放 + 点击接管 + 3D 球状态联动 ──
 function PlanetStory({ item, planet, reversed }: { item: JourneyPlanet; planet: PlanetData; reversed: boolean }) {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const [active, setActive] = useState(0)
   const [started, setStarted] = useState(false)
   const [manual, setManual] = useState(false)
@@ -260,7 +262,7 @@ function PlanetStory({ item, planet, reversed }: { item: JourneyPlanet; planet: 
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '80px 24px',
+        padding: isMobile ? '64px 16px' : '80px 24px',
       }}
     >
       <div style={{
@@ -280,19 +282,20 @@ function PlanetStory({ item, planet, reversed }: { item: JourneyPlanet; planet: 
           transition={{ duration: 1.2, ease: 'easeOut' }}
           style={{ position: 'relative' }}
         >
-          <Planet3D planet={planet} size={420} textures={item.textures} beat={beat.tone} />
+          <Planet3D planet={planet} size={isMobile ? 260 : 420} textures={item.textures} beat={beat.tone} />
         </motion.div>
 
         {/* 文字与交互时间轴 */}
-        <div style={{ maxWidth: 480, minWidth: 300 }}>
+        <div style={{ maxWidth: 480, minWidth: isMobile ? 0 : 300, width: isMobile ? '100%' : undefined }}>
           <motion.div
             {...fadeUp}
             style={{
-              fontSize: '0.6rem',
-              letterSpacing: '0.38em',
-              color: THEME.textFaint,
+              fontSize: '0.72rem',
+              letterSpacing: '0.2em',
+              color: THEME.accentCyan,
               textTransform: 'uppercase',
-              fontFamily: THEME.monoFont,
+              fontFamily: THEME.displayFont,
+              textShadow: THEME.labelGlow,
               marginBottom: 10,
             }}
           >
@@ -305,7 +308,7 @@ function PlanetStory({ item, planet, reversed }: { item: JourneyPlanet; planet: 
             viewport={{ once: true, amount: 0.4 }}
             transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }}
             style={{
-              fontFamily: "'Jost Variable', 'Jost', Futura, 'Segoe UI', sans-serif",
+              fontFamily: THEME.displayFont,
               fontWeight: 340,
               letterSpacing: '0.18em',
               fontSize: 'clamp(1.7rem, 3.8vw, 2.5rem)',
@@ -363,17 +366,14 @@ function PlanetStory({ item, planet, reversed }: { item: JourneyPlanet; planet: 
                 transition={{ duration: 0.35 }}
                 onClick={() => setExpanded(expanded ? false : true)}
                 style={{
-                  border: `1px solid ${expanded ? `${beatColor}55` : 'rgba(255,255,255,0.12)'}`,
-                  background: expanded ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.028)',
-                  borderRadius: 10,
+                  background: 'linear-gradient(to right, rgba(255,255,255,0.30), rgba(255,255,255,0))',
+                  borderRadius: THEME.cardRadius,
                   padding: '14px 16px 14px 18px',
                   position: 'relative',
                   cursor: 'pointer',
                   minHeight: 96,
                 }}
               >
-                {/* 左侧状态色条 */}
-                <div style={{ position: 'absolute', left: 0, top: 12, bottom: 12, width: 3, borderRadius: 2, background: beatColor }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 7 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span
@@ -389,9 +389,6 @@ function PlanetStory({ item, planet, reversed }: { item: JourneyPlanet; planet: 
                       fontSize: '0.6rem',
                       letterSpacing: '0.12em',
                       color: expanded ? THEME.textFaint : beatColor,
-                      border: `1px solid ${expanded ? 'rgba(255,255,255,0.2)' : `${beatColor}66`}`,
-                      borderRadius: 4,
-                      padding: '3px 10px',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -453,11 +450,12 @@ function PlanetStory({ item, planet, reversed }: { item: JourneyPlanet; planet: 
           >
             <button
               onClick={() => navigate(`/spectrum/${item.name}`)}
+              className="cta-textlink"
               style={{
-                padding: '9px 22px',
-                borderRadius: 4,
-                border: '1px solid rgba(102,217,255,0.4)',
-                background: 'rgba(102,217,255,0.06)',
+                padding: '6px 2px',
+                border: 'none',
+                borderBottom: `1px solid ${THEME.accentBlue}66`,
+                background: 'transparent',
                 color: THEME.accentBlue,
                 fontSize: '0.78rem',
                 fontWeight: 300,
@@ -469,10 +467,11 @@ function PlanetStory({ item, planet, reversed }: { item: JourneyPlanet; planet: 
             </button>
             <button
               onClick={() => navigate(`/galaxy/${item.name}`)}
+              className="cta-textlink"
               style={{
-                padding: '9px 22px',
-                borderRadius: 4,
-                border: '1px solid rgba(255,255,255,0.16)',
+                padding: '6px 2px',
+                border: 'none',
+                borderBottom: '1px solid rgba(255,255,255,0.22)',
                 background: 'transparent',
                 color: THEME.textSecondary,
                 fontSize: '0.78rem',
@@ -492,11 +491,14 @@ function PlanetStory({ item, planet, reversed }: { item: JourneyPlanet; planet: 
 
 export default function JourneyPage() {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   return (
     <div style={{ background: THEME.bg, color: THEME.textPrimary, overflowX: 'hidden' }}>
-      {/* 宇宙氛围背景音乐（右上角开关，浏览器策略要求用户手势触发） */}
-      <BgmPlayer />
+      {/* 宇宙星云动态背景（多层：星系贴图 + 星云云 + 视差星点 + 暗角），fixed 于视口 zIndex 0 */}
+      <CosmicBackground />
+      {/* 内容层：相对定位 zIndex 1，覆盖在动态背景之上 */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
       {/* ═══════════ HERO ═══════════ */}
       <section style={{
         minHeight: '100vh',
@@ -528,11 +530,12 @@ export default function JourneyPage() {
           animate={{ opacity: 1 }}
           transition={{ duration: 1.6, delay: 0.2 }}
           style={{
-            fontSize: '0.62rem',
-            letterSpacing: '0.5em',
-            color: THEME.accentRed,
+            fontSize: '0.75rem',
+            letterSpacing: '0.32em',
+            color: THEME.accentCyan,
             textTransform: 'uppercase',
-            fontFamily: THEME.monoFont,
+            fontFamily: THEME.displayFont,
+            textShadow: THEME.labelGlow,
             marginBottom: 22,
           }}
         >
@@ -540,19 +543,30 @@ export default function JourneyPage() {
         </motion.div>
 
         <motion.h1
+          className="cover-title-glow"
           initial={{ opacity: 0, y: 40, letterSpacing: '0.42em' }}
           animate={{ opacity: 1, y: 0, letterSpacing: '0.26em' }}
           transition={{ duration: 1.4, ease: 'easeOut', delay: 0.5 }}
           style={{
-            fontFamily: "'Jost Variable', 'Jost', Futura, 'Segoe UI', sans-serif",
+            fontFamily: THEME.displayFont,
             fontWeight: 300,
             fontSize: 'clamp(1.8rem, 5.6vw, 3.8rem)',
             margin: 0,
             textAlign: 'center',
+            textShadow: '0 0 20px rgba(32,235,243,0.5), 0 0 44px rgba(32,235,243,0.25)',
           }}
         >
-          SECOND EARTH
+          SEC<span style={{ color: THEME.accentCyan }}>O</span>ND EARTH
         </motion.h1>
+
+        {/* 大标题下的发光白下划线：从中点绘入 + 持续呼吸发光 */}
+        <div className="cover-underline" style={{
+          width: 'clamp(150px, 26vw, 280px)',
+          height: 2,
+          marginTop: 24,
+          borderRadius: 1,
+          background: 'linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 22%, rgba(255,255,255,0.95) 78%, rgba(255,255,255,0) 100%)',
+        }} />
 
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -580,7 +594,7 @@ export default function JourneyPage() {
           transition={{ duration: 1.5, delay: 2 }}
           style={{ position: 'absolute', bottom: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}
         >
-          <span style={{ fontSize: '0.58rem', letterSpacing: '0.4em', color: THEME.textFaint, textTransform: 'uppercase', fontFamily: THEME.monoFont }}>
+          <span style={{ fontSize: '0.64rem', letterSpacing: '0.2em', color: THEME.textSecondary, textTransform: 'uppercase', fontFamily: THEME.monoFont }}>
             Scroll
           </span>
           <motion.div
@@ -597,23 +611,25 @@ export default function JourneyPage() {
       <section
         style={{
           minHeight: '100vh',
-          padding: '140px 24px',
+          padding: isMobile ? '90px 20px' : '140px 24px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
+          position: 'relative',
         }}
       >
         <div style={{ width: 48, height: 1, background: 'rgba(255,255,255,0.2)', marginBottom: 36 }} />
         <motion.div
           {...fadeUp}
           style={{
-            fontSize: '0.6rem',
-            letterSpacing: '0.44em',
-            color: THEME.accentRed,
+            fontSize: '0.72rem',
+            letterSpacing: '0.24em',
+            color: THEME.accentCyan,
             textTransform: 'uppercase',
-            fontFamily: THEME.monoFont,
+            fontFamily: THEME.displayFont,
+            textShadow: THEME.labelGlow,
             marginBottom: 34,
           }}
         >
@@ -646,11 +662,14 @@ export default function JourneyPage() {
       {/* ═══════════ 过渡段 1 ═══════════ */}
       <section
         style={{
-          padding: '140px 24px',
+          minHeight: '100vh',
+          padding: isMobile ? '90px 20px' : '140px 24px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          justifyContent: 'center',
           textAlign: 'center',
+          position: 'relative',
         }}
       >
         <div style={{
@@ -703,15 +722,16 @@ export default function JourneyPage() {
           alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
-          padding: '120px 24px',
+          padding: isMobile ? '80px 20px' : '120px 24px',
         }}
       >
         <div style={{
-          fontSize: '0.6rem',
-          letterSpacing: '0.44em',
-          color: THEME.accentRed,
+          fontSize: '0.72rem',
+          letterSpacing: '0.24em',
+          color: THEME.accentCyan,
           textTransform: 'uppercase',
-          fontFamily: THEME.monoFont,
+          fontFamily: THEME.displayFont,
+          textShadow: THEME.labelGlow,
           marginBottom: 18,
         }}>
           Continue The Journey
@@ -758,6 +778,7 @@ export default function JourneyPage() {
           数据持续更新 · 收藏目标有新增数据时提醒你
         </div>
       </motion.section>
+      </div>
     </div>
   )
 }

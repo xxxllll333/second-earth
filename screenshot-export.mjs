@@ -12,32 +12,22 @@ mkdirSync(OUT, { recursive: true })
 
 // [文件名, 路由, 滚动定位文本（null=首屏）]
 const shots = [
-  ['01_journey_hero', '/', null],
-  ['02_journey_intro', '/', '每一颗系外行星'],
-  ['03_journey_k2-18b', '/', 'K2-18b'],
-  ['04_journey_trappist-1e', '/', 'TRAPPIST-1e'],
-  ['05_journey_wasp-96b', '/', 'WASP-96b'],
-  ['06_journey_wd1856b', '/', 'WD 1856b'],
-  ['07_journey_cta', '/', '进入星表'],
   ['08_catalog', '/catalog', null],
   ['09_galaxy', '/galaxy', null],
-  ['10_spectrum', '/spectrum', null],
-  ['11_spectrum_k2-18b', '/spectrum/K2-18b', null],
   ['12_evolution', '/evolution', null],
-  ['13_mystars', '/mystars', null],
 ]
 
 const browser = await puppeteer.launch({
   executablePath: EDGE,
   headless: 'new',
-  args: ['--window-size=1440,900', '--hide-scrollbars', '--disable-gpu'],
+  args: ['--window-size=1440,900', '--hide-scrollbars', '--use-angle=swiftshader', '--disable-gpu', '--no-sandbox', '--enable-unsafe-swiftshader'],
 })
 const page = await browser.newPage()
 await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 })
 
 for (const [name, route, scrollText] of shots) {
-  await page.goto(BASE + route, { waitUntil: 'networkidle0', timeout: 60000 })
-  await new Promise((r) => setTimeout(r, 2500)) // 等待 3D 球渲染
+  await page.goto(BASE + route, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await new Promise((r) => setTimeout(r, 7000)) // 等待 3D 球渲染（软件渲染较慢）
 
   if (scrollText) {
     // 按文本定位元素并滚动到视口居中

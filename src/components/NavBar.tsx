@@ -1,9 +1,10 @@
-// 顶部导航栏：NASA 风格——细字重宽字距、克制的灰、红色高亮当前项
-// 左侧品牌区：NASA 红竖条 + 中文名 + 英文微标签
+// 顶部导航栏：NASA 风格——细字重宽字距、克制的灰、青色高亮当前项
+// 左侧品牌区：青色竖条 + 中文名 + 英文微标签
 
 import { NavLink } from 'react-router-dom'
 import { useStarStore } from '../store/useStarStore'
 import { THEME } from '../config/visuals'
+import { useIsMobile } from '../lib/useIsMobile'
 
 const navItems = [
   { path: '/', label: '旅程', en: 'JOURNEY' },
@@ -16,6 +17,7 @@ const navItems = [
 
 export default function NavBar() {
   const favoriteCount = useStarStore(s => s.favorites.length)
+  const isMobile = useIsMobile()
 
   return (
     <nav style={{
@@ -23,11 +25,12 @@ export default function NavBar() {
       top: 0,
       left: 0,
       right: 0,
-      height: 54,
+      height: isMobile ? 50 : 54,
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
-      gap: 4,
+      justifyContent: isMobile ? 'flex-start' : 'center',
+      gap: isMobile ? 0 : 4,
+      paddingLeft: isMobile ? 12 : 0,
       background: 'rgba(6,7,11,0.78)',
       backdropFilter: 'blur(12px)',
       borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -35,56 +38,71 @@ export default function NavBar() {
     }}>
       {/* 品牌区 */}
       <div style={{
-        position: 'absolute',
-        left: 22,
+        position: isMobile ? 'static' : 'absolute',
+        left: isMobile ? undefined : 22,
+        flexShrink: 0,
+        marginRight: isMobile ? 6 : 0,
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
+        gap: isMobile ? 8 : 12,
       }}>
-        {/* NASA 红竖条 */}
+        {/* 品牌青色竖条 */}
         <div style={{
-          width: 3,
-          height: 22,
-          background: THEME.accentRed,
+          width: 2,
+          height: isMobile ? 22 : 30,
+          background: THEME.accentCyan,
           borderRadius: 1,
         }} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           <span style={{
-            fontSize: '0.88rem',
+            fontSize: isMobile ? '0.76rem' : '0.88rem',
             fontWeight: 300,
-            letterSpacing: '0.3em',
+            letterSpacing: isMobile ? '0.14em' : '0.3em',
             color: THEME.textPrimary,
             lineHeight: 1.2,
           }}>
             第二地球
           </span>
-          <span style={{
-            fontSize: '0.55rem',
-            letterSpacing: '0.34em',
-            color: THEME.textFaint,
-            textTransform: 'uppercase',
-            fontFamily: THEME.monoFont,
-          }}>
-            Exoplanet Atlas
-          </span>
+          {!isMobile && (
+            <span style={{
+              fontSize: '0.64rem',
+              letterSpacing: '0.16em',
+              color: THEME.accentCyan,
+              textTransform: 'uppercase',
+              fontFamily: THEME.displayFont,
+              textShadow: THEME.labelGlow,
+            }}>
+              Exoplanet Atlas
+            </span>
+          )}
         </div>
       </div>
 
-      {/* 导航项 */}
+      {/* 导航项（移动端横向滚动） */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: isMobile ? 0 : 4,
+        flex: isMobile ? 1 : undefined,
+        overflowX: isMobile ? 'auto' : 'visible',
+        WebkitOverflowScrolling: 'touch',
+      }}>
       {navItems.map(item => (
         <NavLink
           key={item.path}
           to={item.path}
           end={item.path === '/'}
           style={({ isActive }) => ({
-            padding: '6px 14px',
-            fontSize: '0.8rem',
+            padding: isMobile ? '6px 9px' : '6px 14px',
+            fontSize: isMobile ? '0.74rem' : '0.8rem',
             fontWeight: 300,
-            letterSpacing: '0.12em',
+            letterSpacing: isMobile ? '0.04em' : '0.12em',
             textDecoration: 'none',
             color: isActive ? THEME.textPrimary : THEME.textSecondary,
             position: 'relative',
             transition: 'color 0.2s',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           })}
         >
           {({ isActive }) => (
@@ -95,8 +113,8 @@ export default function NavBar() {
                   marginLeft: 5,
                   padding: '0px 6px',
                   borderRadius: 8,
-                  background: THEME.accentRed,
-                  color: '#ffffff',
+                  background: THEME.accentCyan,
+                  color: '#061018',
                   fontSize: '0.62rem',
                   fontWeight: 500,
                   fontFamily: THEME.monoFont,
@@ -104,7 +122,7 @@ export default function NavBar() {
                   {favoriteCount}
                 </span>
               )}
-              {/* 当前项：红色下划线 */}
+              {/* 当前项：青色下划线 */}
               {isActive && (
                 <span style={{
                   position: 'absolute',
@@ -113,7 +131,7 @@ export default function NavBar() {
                   transform: 'translateX(-50%)',
                   width: 14,
                   height: 2,
-                  background: THEME.accentRed,
+                  background: THEME.accentCyan,
                   borderRadius: 1,
                 }} />
               )}
@@ -121,6 +139,7 @@ export default function NavBar() {
           )}
         </NavLink>
       ))}
+      </div>
     </nav>
   )
 }

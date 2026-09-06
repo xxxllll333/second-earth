@@ -51,10 +51,11 @@ export default function PlanetDetailModal({ planet, onClose }: PlanetDetailModal
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0,0,0,0.55)',
+      background: 'rgba(0,0,0,0.42)',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'flex-end',
+      paddingRight: '6vw',
       zIndex: 200,
     }} onClick={onClose}>
       <div style={{
@@ -64,16 +65,17 @@ export default function PlanetDetailModal({ planet, onClose }: PlanetDetailModal
         overflowY: 'auto',
         background: 'rgba(9,10,16,0.97)',
         border: '1px solid rgba(255,255,255,0.09)',
-        borderRadius: 10,
+        borderRadius: THEME.cardRadius,
         padding: '26px 28px',
       }} onClick={e => e.stopPropagation()}>
         {/* 档案微标签 */}
         <div style={{
-          fontSize: '0.58rem',
-          letterSpacing: '0.34em',
-          color: THEME.textFaint,
+          fontSize: '0.66rem',
+          letterSpacing: '0.2em',
+          color: THEME.accentCyan,
           textTransform: 'uppercase',
-          fontFamily: THEME.monoFont,
+          fontFamily: THEME.displayFont,
+          textShadow: THEME.labelGlow,
           marginBottom: 12,
           display: 'flex',
           justifyContent: 'space-between',
@@ -87,9 +89,9 @@ export default function PlanetDetailModal({ planet, onClose }: PlanetDetailModal
           <div style={{
             width: 34, height: 34, borderRadius: '50%',
             background: planet.color,
-            boxShadow: `0 0 18px ${planet.color}`,
+            boxShadow: `0 0 11px ${planet.color}`,
           }} />
-          <h2 style={{ color: THEME.textPrimary, fontSize: '1.3rem', fontWeight: 300, letterSpacing: '0.08em', margin: 0 }}>
+          <h2 style={{ color: THEME.textPrimary, fontSize: '1.3rem', fontWeight: 300, letterSpacing: '0.08em', margin: 0, fontFamily: THEME.displayFont }}>
             {planet.name}
           </h2>
           <span style={{

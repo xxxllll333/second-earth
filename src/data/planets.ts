@@ -70,6 +70,38 @@ export const keyPlanets: PlanetData[] = [
   { name: 'Kepler-7b',  radius: 16.6, mass: 137,   temp: 1630, distance: 3160, period: 4.89,   esi: 0.00, discoveryYear: 2010, discoveryMethod: '凌星法',   color: '#ff6633', isHabitable: false, hasSpectrum: false, isRejected: false, category: '一般' },
 ]
 
+// ── 卡片一句话描述（我的星表/星表卡片用）：事实与全站科学口径一致，≤两行 ──
+export const PLANET_BLURB: Record<string, string> = {
+  'K2-18b': '红矮星宜居带里的亚海王星；JWST 读到甲烷与 CO₂，DMS 信号待复测。',
+  'TRAPPIST-1e': '超冷红矮星宜居带的岩石行星；七星系统之一，JWST 大气观测进行中。',
+  'TRAPPIST-1f': '七星系统中段的岩石行星，可能被全球性海洋覆盖。',
+  'TRAPPIST-1g': '七星中最大的一颗，居宜居带外缘，或为冰洋世界。',
+  'WD 1856b': '幸存于宿主星死亡之后的木星级行星，今绕白矮星运行；形成机制未解。',
+  'TRAPPIST-1d': '曾是宜居带头号候选；2025 年 JWST 证实无大气层而被否决。',
+  'TRAPPIST-1b': '七星中最内侧的岩石行星，表面约 400 K，无大气迹象。',
+  'TRAPPIST-1c': '金星式条件的岩石行星，观测暗示大气极薄或不存在。',
+  'LHS 1140b': '绕安静 M 矮星的超级地球，海洋世界的有力候选。',
+  'Proxima b': '距地球最近的系外行星（4.2 ly），宜居带内但饱受恒星耀斑轰击。',
+  'TOI-700d': 'TESS 发现的 M 矮星宜居带地球尺寸行星。',
+  'GJ 1061d': '近邻红矮星三行星系统的最外侧一颗，落在宜居带内。',
+  'Kepler-452b': '绕一颗比太阳更年长的类日恒星，人称“地球的表哥”。',
+  'WASP-96b': '热土星；JWST 首张系外行星光谱的主角，读到水汽。',
+  'WASP-39b': '蓬松的热土星；JWST 在其大气中首次检测到 CO₂。',
+  'HD 189733b': '著名的“钴蓝”热木星，下着硅酸盐雨、刮着公里级风暴。',
+  'GJ 1214b': '迷你海王星“水世界”原型，终年裹着厚霾。',
+  'LTT 9779b': '超热海王星，大气含金属云，表面反亮如镜。',
+  '55 Cnc e': '熔岩超级地球，一年仅 18 小时，表面是岩浆洋。',
+  'GJ 667Cc': '三合星系统中 M 矮星宜居带内的超级地球。',
+  'Kepler-186f': '首颗在宜居带里发现的地球尺寸行星（2014），绕 M 矮星。',
+  'Ross 128b': '11 光年外的温和岩石行星，宿主是出了名安静的红矮星。',
+  'Teegarden b': '绕已知最冷恒星系统之一运行，ESI 高达 0.95。',
+  'GJ 1002b': '近邻 M 矮星宜居带里两颗类地行星之一。',
+  'WASP-12b': '正被宿主星撕裂吞噬的超热木星。',
+  'WASP-17b': '已知最大最蓬松的行星之一；JWST 读到二氧化硅尘埃。',
+  'HD 209458b': '“奥西里斯”：首颗被观测到凌星的系外行星，大气正被恒星风剥离。',
+  'Kepler-7b': '开普勒早期发现：低密度膨胀行星，云层反照率极高。',
+}
+
 // ── 地球基准：不进入 keyPlanets（地球是参照系而非系外行星），供“与地球对比”可视化使用 ──
 export const EARTH: PlanetData = {
   name: '地球', radius: 1, mass: 1, temp: 288, distance: 0, period: 365.25, esi: 1,
@@ -102,6 +134,53 @@ export const starParams: Record<string, { luminosity: number; temp: number; mass
   'WASP-17':    { luminosity: 2.7,     temp: 6550, mass: 1.2,    spectral: 'F6V' },
   'HD 209458':  { luminosity: 1.79,    temp: 6091, mass: 1.15,   spectral: 'G0V' },
   'Kepler-7':   { luminosity: 2.2,     temp: 5933, mass: 1.36,   spectral: 'G0V' },
+}
+
+// ── 寄主恒星真实天球坐标（J2000 赤道坐标，单位：度）──
+// 键同 starParams（systemOf 去尾字母后的系统名）。用于星表“探索模式”把 28 颗
+// 行星按真实朝向散布在太阳周围，构成真实 3D 星图。数值取自公开发布的恒星 J2000 位置。
+export const starCoords: Record<string, { ra: number; dec: number }> = {
+  'TRAPPIST-1': { ra: 346.622, dec: -5.041 },   // 与后端 system_service 一致
+  'K2-18':      { ra: 172.560, dec: 7.591 },    // 与后端 system_service 一致
+  'Proxima':    { ra: 217.429, dec: -62.679 },
+  'WD 1856':    { ra: 284.481, dec: 53.902 },
+  'LHS 1140':   { ra: 11.247,  dec: -15.270 },
+  'TOI-700':    { ra: 93.350,  dec: -65.532 },
+  'GJ 1061':    { ra: 53.986,  dec: -44.513 },
+  'Kepler-452': { ra: 295.985, dec: 44.273 },
+  'WASP-96':    { ra: 355.928, dec: -47.523 },
+  'WASP-39':    { ra: 217.327, dec: -3.444 },
+  'HD 189733':  { ra: 300.182, dec: 22.711 },
+  'GJ 1214':    { ra: 258.829, dec: 4.964 },
+  'LTT 9779':   { ra: 346.604, dec: -39.018 },
+  '55 Cnc':     { ra: 133.149, dec: 28.331 },
+  'GJ 667C':    { ra: 214.715, dec: -34.989 },
+  'Kepler-186': { ra: 298.653, dec: 43.960 },
+  'Ross 128':   { ra: 176.935, dec: 0.804 },
+  'Teegarden':  { ra: 43.254,  dec: 16.881 },
+  'GJ 1002':    { ra: 9.792,   dec: -7.542 },
+  'WASP-12':    { ra: 97.637,  dec: 29.672 },
+  'WASP-17':    { ra: 239.933, dec: -28.062 },
+  'HD 209458':  { ra: 330.795, dec: 18.884 },
+  'Kepler-7':   { ra: 288.582, dec: 41.090 },
+}
+
+// ── 赤道坐标(J2000) → 银道坐标(l, b)：标准旋转矩阵解析式 ──
+// 北银极 (RA 192.85948°, Dec 27.12825°)，北天极银经 l_NCP = 122.93192°。
+// 用银道坐标可让邻近恒星自然贴近银河盘面（|b| 多为小值），与银河背景对齐。
+export function equatorialToGalactic(raDeg: number, decDeg: number): { l: number; b: number } {
+  const D2R = Math.PI / 180
+  const raGP = 192.85948 * D2R
+  const decGP = 27.12825 * D2R
+  const lNCP = 122.93192 * D2R
+  const ra = raDeg * D2R
+  const dec = decDeg * D2R
+  const sinB = Math.sin(decGP) * Math.sin(dec) + Math.cos(decGP) * Math.cos(dec) * Math.cos(ra - raGP)
+  const b = Math.asin(Math.max(-1, Math.min(1, sinB)))
+  const y = Math.cos(dec) * Math.sin(ra - raGP)
+  const x = Math.sin(dec) * Math.cos(decGP) - Math.cos(dec) * Math.sin(decGP) * Math.cos(ra - raGP)
+  const l = lNCP - Math.atan2(y, x)
+  return { l: (((l / D2R) % 360) + 360) % 360, b: b / D2R }
 }
 
 // ── 宜居带内外边界（AU）：Kopparapu 2013 保守边界近似，内外边界 ∝ √光度 ──

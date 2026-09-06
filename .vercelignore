@@ -1,0 +1,9 @@
+# 仅部署前端 SPA：排除后端/文档/截图/临时脚本，保持上传精简、避免 backend/venv 海量文件拖垮部署
+backend
+docs
+figma-export
+.vercel-tmp
+/*.mjs
+/qr-*.png
+/qr-scan-cards.html
+/heic1503a*.png

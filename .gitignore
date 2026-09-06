@@ -4,6 +4,11 @@ dist
 *.local
 *.tsbuildinfo
 
+# Python 虚拟环境与缓存（本地环境，不入库）
+backend/venv/
+__pycache__/
+*.pyc
+
 # 验证截图与页面快照导出产物（脚本输出，不入库）
 figma-export/
 figma-html/
@@ -17,3 +22,9 @@ figma-html/
 temp-*
 qr-access.*
 svg-preview.html
+
+# Tencent Cloud EdgeOne
+.env
+.edgeone/*
+.tef_dist/*
+  

@@ -128,7 +128,7 @@ export const VISUALS = {
   tooltipBg: 'rgba(10,10,20,0.92)',
 
   /** 信息卡圆角大小（像素）。← 越大越圆润，改 0 变直角 */
-  tooltipRadius: 8,
+  tooltipRadius: 0,
 
   /** 信息卡内边距（像素） */
   tooltipPadding: '10px 14px',
@@ -157,6 +157,12 @@ export const THEME = {
   /** 面板细边框 */
   panelBorder: 'rgba(255,255,255,0.07)',
 
+  /** 卡片/线框圆角（去 AI 味：圆角→近直角）。改 0 = 纯直角；改大 = 更圆润。全站卡片统一用这个 */
+  cardRadius: 0,
+
+  /** 主视区内容宽度：演化/光谱/星系三页对齐，演示切页时左右边缘不跳 */
+  contentWidth: 1400,
+
   /** 主要文字 */
   textPrimary: '#f2f2f5',
 
@@ -168,4 +174,22 @@ export const THEME = {
 
   /** 等宽字体栈：数据读数用 */
   monoFont: '"SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace',
+
+  /** 英文小字蓝（去 AI 味主色，用户指定 #20EBF3 亮青）：所有英文微标签、品牌小字 */
+  accentCyan: '#20EBF3',
+
+  /** 英文展示字体 Good Times（已内嵌 woff2）：所有英文小字/微标签 */
+  displayFont: "'Good Times', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+
+  /** 装饰性英文小字的青色柔光（配合 accentCyan + displayFont）：让微标签“发光” */
+  labelGlow: '0 0 6px rgba(32,235,243,0.55), 0 0 14px rgba(32,235,243,0.3)',
+
+  /** 中文字体 阿里巴巴普惠体 65 Medium（已子集化内嵌 woff2） */
+  cjkFont: "'Alibaba PuHuiTi 65', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+
+  /** 中文“压扁”程度（scaleY）：1=不压，0.88=略微压扁（普惠体参考风）。改这个数字即可调压扁幅度 */
+  cjkFlatten: 0.88,
+
+  /** 页面大标题的柔光（配合 cjkFlatten 压扁）：冷白星辉，让中文大标题发光但不偏色。改这里调发光强弱 */
+  titleGlow: '0 0 18px rgba(214,232,255,0.5), 0 0 42px rgba(150,195,255,0.28)',
 }

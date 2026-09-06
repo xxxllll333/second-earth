@@ -73,6 +73,11 @@ export interface ProceduralStyle {
   clouds: number | null // 云覆盖率阈值 0.45~0.7，null = 无云
   atmos: { rayleigh: string; intensity: number } | null
   rim: string           // 边缘冷光色
+  sea?: number          // terran 海平面线：h 低于此为海洋，默认 0.44；越大海洋越多（连续形态旋钮）
+  warp?: number         // 域扭曲强度：把噪声场扭成湍流涡旋，默认 0（连续形态旋钮）
+  cloudFreq?: number    // 云层噪声频率，默认 2.6；低=大云团，高=细碎霾纹
+  ambient?: number      // 地表环境光（夜侧底光），默认 0.15；调高让背光面细节仍可读
+  cloudAlpha?: number   // 云层不透明度，默认 0.88；调低=薄雾纱幕
 }
 
 export function seedOf(name: string): [number, number, number] {
@@ -135,7 +140,7 @@ export function labelColor(p: PlanetData): string {
 }
 
 // ══════════════════ GLSL：simplex 3D 噪声 + fbm ══════════════════
-const NOISE_GLSL = /* glsl */ `
+export const NOISE_GLSL = /* glsl */ `
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
@@ -215,6 +220,9 @@ uniform vec3 uC3; uniform vec3 uC4; uniform vec3 uC5;
 uniform vec3 uSunDir;
 uniform vec3 uRim;
 uniform float uDim;
+uniform float uSea;
+uniform float uWarp;
+uniform float uAmb;
 varying vec3 vDir;
 varying vec3 vNormalW;
 varying vec3 vViewW;
@@ -222,14 +230,20 @@ ${NOISE_GLSL}
 
 void main() {
   vec3 dir = normalize(vDir);
-  float h = fbm(dir * uFreq + uSeed) * 0.5 + 0.5;
+  // 域扭曲：uWarp>0 时噪声场被扭成湍流涡旋（形态旋钮；0 = 与原外观完全一致）
+  vec3 sp = dir * uFreq + uSeed + uWarp * vec3(fbm(dir * (uFreq * 0.55) + uSeed * 2.1));
+  float h = fbm(sp) * 0.5 + 0.5;
   vec3 col;
   if (uMode < 0.5) {
-    // terran：海洋 → 海岸 → 陆地 → 山 → 雪
-    if (h < 0.44) col = mix(uC0, uC1, smoothstep(0.0, 1.0, h / 0.44));
-    else if (h < 0.52) col = mix(uC1, uC2, (h - 0.44) / 0.08);
-    else if (h < 0.63) col = mix(uC2, uC3, (h - 0.52) / 0.11);
-    else if (h < 0.78) col = mix(uC3, uC4, (h - 0.63) / 0.15);
+    // terran：海洋 → 海岸 → 陆地 → 山 → 雪（海平面线随 uSea 整体平移 = 海陆形态渐变）
+    float s0 = uSea;
+    float s1 = uSea + 0.08;
+    float s2 = uSea + 0.19;
+    float s3 = uSea + 0.34;
+    if (h < s0) col = mix(uC0, uC1, smoothstep(0.0, 1.0, h / max(s0, 0.001)));
+    else if (h < s1) col = mix(uC1, uC2, (h - s0) / 0.08);
+    else if (h < s2) col = mix(uC2, uC3, (h - s1) / 0.11);
+    else if (h < s3) col = mix(uC3, uC4, (h - s2) / 0.15);
     else col = uC5;
   } else if (uMode < 1.5) {
     // banded：纬度条纹 + 湍流
@@ -249,7 +263,7 @@ void main() {
   }
   vec3 nrm = normalize(vNormalW);
   float ndl = clamp(dot(nrm, normalize(uSunDir)), 0.0, 1.0);
-  col *= 0.15 + 0.95 * ndl;
+  col *= uAmb + 0.95 * ndl;
   float rim = pow(1.0 - abs(dot(normalize(vViewW), nrm)), 3.0);
   col += uRim * rim * (0.22 + 0.78 * (1.0 - ndl));
   col *= uDim;
@@ -273,6 +287,7 @@ const CLOUD_FRAG = /* glsl */ `
 uniform vec3 uSeed;
 uniform float uFreq;
 uniform float uCover;
+uniform float uAlpha;
 uniform vec3 uSunDir;
 varying vec3 vDir;
 varying vec3 vNormalW;
@@ -286,7 +301,7 @@ void main() {
   if (cloud < 0.012) discard;
   float ndl = clamp(dot(normalize(vNormalW), normalize(uSunDir)), 0.0, 1.0);
   float shade = 0.6 + 0.45 * ndl;
-  gl_FragColor = vec4(vec3(0.93, 0.95, 1.0) * shade, cloud * 0.88);
+  gl_FragColor = vec4(vec3(0.93, 0.95, 1.0) * shade, cloud * uAlpha);
 }
 `
 
@@ -382,14 +397,18 @@ function buildSurfaceUniforms(s: ProceduralStyle, dimmed: boolean) {
     uSunDir: { value: SUN_DIR.clone() },
     uRim: { value: new THREE.Color(s.rim) },
     uDim: { value: dimmed ? 0.14 : 1 },
+    uSea: { value: s.sea ?? 0.44 },
+    uWarp: { value: s.warp ?? 0 },
+    uAmb: { value: s.ambient ?? 0.15 },
   }
 }
 
-function buildCloudUniforms(seed: [number, number, number], cover: number) {
+function buildCloudUniforms(seed: [number, number, number], cover: number, freq = 2.6, alpha = 0.88) {
   return {
     uSeed: { value: new THREE.Vector3(...seed) },
-    uFreq: { value: 2.6 },
+    uFreq: { value: freq },
     uCover: { value: cover },
+    uAlpha: { value: alpha },
     uSunDir: { value: SUN_DIR.clone() },
   }
 }
@@ -421,14 +440,16 @@ export function PlanetSurface({
 
 // ── 程序化云层（可选动态光照）──
 export function CloudMaterial({
-  seed, cover, sunPos, meshRef,
+  seed, cover, freq = 2.6, alpha = 0.88, sunPos, meshRef,
 }: {
   seed: [number, number, number]
   cover: number
+  freq?: number
+  alpha?: number
   sunPos?: THREE.Vector3
   meshRef?: React.RefObject<THREE.Mesh | null>
 }) {
-  const uniforms = useMemo(() => buildCloudUniforms(seed, cover), [seed, cover])
+  const uniforms = useMemo(() => buildCloudUniforms(seed, cover, freq, alpha), [seed, cover, freq, alpha])
   const matRef = useRef<THREE.ShaderMaterial>(null)
   useFrame(() => {
     if (sunPos && matRef.current && meshRef?.current) {
@@ -519,7 +540,7 @@ export function ProceduralPlanet({
       {style.clouds !== null && !dimmed && (
         <mesh ref={cloudRef} scale={1.03}>
           <sphereGeometry args={[radius, 48, 48]} />
-          <CloudMaterial seed={style.seed} cover={style.clouds} sunPos={sunPos} meshRef={cloudRef} />
+          <CloudMaterial seed={style.seed} cover={style.clouds} freq={style.cloudFreq ?? 2.6} alpha={style.cloudAlpha ?? 0.88} sunPos={sunPos} meshRef={cloudRef} />
         </mesh>
       )}
       {style.atmos && !dimmed && (

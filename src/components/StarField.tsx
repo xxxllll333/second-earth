@@ -320,7 +320,7 @@ export default function StarField({ filter, searchQuery, selectedName, onSelect 
         // 名字标签：小号细字，星图式标注
         if (VISUALS.planetLabelSize > 0 && visible) {
           const fs = VISUALS.planetLabelSize + (isHovered || isSelected ? 1 : 0)
-          ctx.font = `${fs}px ${THEME.monoFont}`
+          ctx.font = `${fs}px ${THEME.displayFont}`
           ctx.textAlign = 'center'
           ctx.fillStyle = labelColor(planet)
           ctx.globalAlpha = isHovered || isSelected ? 1 : 0.9
@@ -412,17 +412,17 @@ export default function StarField({ filter, searchQuery, selectedName, onSelect 
         gap: VISUALS.legendGap,
         padding: '10px 22px',
         background: THEME.panelBg,
-        backdropFilter: 'blur(10px)',
         border: `1px solid ${THEME.panelBorder}`,
-        borderRadius: 6,
+        borderRadius: THEME.cardRadius,
         pointerEvents: 'none',
       }}>
         <span style={{
-          fontSize: '0.56rem',
-          letterSpacing: '0.3em',
-          color: THEME.textFaint,
+          fontSize: '0.64rem',
+          letterSpacing: '0.18em',
+          color: THEME.accentCyan,
           textTransform: 'uppercase',
-          fontFamily: THEME.monoFont,
+          fontFamily: THEME.displayFont,
+          textShadow: THEME.labelGlow,
           marginRight: 2,
         }}>
           Legend
@@ -447,7 +447,7 @@ export default function StarField({ filter, searchQuery, selectedName, onSelect 
           top: Math.max(hovered.y - 50, 66),
           background: 'rgba(9,10,16,0.95)',
           border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 6,
+          borderRadius: THEME.cardRadius,
           padding: '12px 16px',
           pointerEvents: 'none',
           zIndex: 10,
@@ -459,6 +459,7 @@ export default function StarField({ filter, searchQuery, selectedName, onSelect 
             letterSpacing: '0.08em',
             fontSize: '0.88rem',
             marginBottom: 6,
+            fontFamily: THEME.displayFont,
           }}>
             {hovered.planet.name}
           </div>

@@ -1,3 +1,19 @@
+/* ═══════════════════════════════════════════════════════════
+   全局基础：移动端兜底（防横向滚动 / 防字号自动放大 / 触控优化）
+   ═══════════════════════════════════════════════════════════ */
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+body {
+  margin: 0;
+  background: #06070B;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+* { -webkit-tap-highlight-color: transparent; }
+
 /* Jost 变量字体（100-900）：Futura 系几何无衬线，NASA 铭牌字体传统的继承者
    本地加载，离线可用（Google Fonts 在国内不可达，不走 CDN） */
 @font-face {
@@ -7,3 +23,81 @@
   font-style: normal;
   font-display: swap;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   封面大标题：发光脉冲 + 发光白下划线动画
+   ═══════════════════════════════════════════════════════════ */
+
+/* 大标题青色辉光呼吸 */
+@keyframes titleGlowPulse {
+  0%, 100% { text-shadow: 0 0 16px rgba(32,235,243,0.40), 0 0 40px rgba(32,235,243,0.20), 0 0 3px rgba(255,255,255,0.55); }
+  50%      { text-shadow: 0 0 28px rgba(32,235,243,0.68), 0 0 64px rgba(32,235,243,0.36), 0 0 5px rgba(255,255,255,0.90); }
+}
+.cover-title-glow { animation: titleGlowPulse 4.2s ease-in-out 1.4s infinite; }
+
+/* 标题下发光白线：先从中点绘入，再持续呼吸发光 */
+@keyframes underlineDraw {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+@keyframes underlineBreath {
+  0%, 100% { box-shadow: 0 0 6px rgba(255,255,255,0.60), 0 0 16px rgba(32,235,243,0.45); opacity: 0.82; }
+  50%      { box-shadow: 0 0 12px rgba(255,255,255,0.95), 0 0 30px rgba(32,235,243,0.80); opacity: 1; }
+}
+.cover-underline {
+  transform-origin: center;
+  animation: underlineDraw 1.1s cubic-bezier(0.22, 1, 0.36, 1) 1s both,
+             underlineBreath 3.4s ease-in-out 2.1s infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   旅程页星云背景：多层缓慢运动（优雅 · 浩瀚 · 有层次）
+   ═══════════════════════════════════════════════════════════ */
+
+/* 星系贴图：极慢 Ken Burns 缩放 + 平移，营造纵深漂移 */
+@keyframes nebulaKenBurns {
+  0%   { transform: scale(1.08) translate3d(0, 0, 0); }
+  50%  { transform: scale(1.18) translate3d(-1.6%, -1.2%, 0); }
+  100% { transform: scale(1.08) translate3d(0, 0, 0); }
+}
+.nebula-image { animation: nebulaKenBurns 52s ease-in-out infinite; will-change: transform; }
+
+/* 星云彩色云：缓慢漂移 + 明暗呼吸 */
+@keyframes nebulaDrift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 0.34; }
+  50%  { transform: translate3d(2.5%, -2%, 0) scale(1.1); opacity: 0.48; }
+  100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.34; }
+}
+.nebula-clouds { animation: nebulaDrift 40s ease-in-out infinite; will-change: transform, opacity; }
+
+/* 星点闪烁（两层不同速率 → 视差感） */
+@keyframes starTwinkle { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.95; } }
+.nebula-stars   { animation: starTwinkle 5.5s ease-in-out infinite; }
+.nebula-stars-2 { animation: starTwinkle 8s ease-in-out 2s infinite; }
+
+/* ═══════════════════════════════════════════════════════════
+   光谱页序章：三幕漫游动画
+   ═══════════════════════════════════════════════════════════ */
+
+/* 第一幕：行星剪影缓缓凌星（循环） */
+@keyframes prologueTransit {
+  from { transform: translateX(0); }
+  to   { transform: translateX(240px); }
+}
+.prologue-planet { animation: prologueTransit 10s linear infinite; }
+
+/* 第二/三幕：指纹与散点逐个浮现 */
+@keyframes prologueFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.prologue-fade { animation: prologueFadeIn 0.9s ease both; }
+
+/* 文字链接式 CTA（去圆角描边框）：悬停下划线与文字提亮为青色 */
+.cta-textlink { transition: color 0.25s ease, border-color 0.25s ease; }
+.cta-textlink:hover {
+  color: #20ebf3 !important;
+  border-color: #20ebf3 !important;
+  text-shadow: 0 0 12px rgba(32, 235, 243, 0.45);
+}
+
+/* 星系页指标条：切星时数值换入（上浮淡入） */
+@keyframes metricSwap { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+.metric-value-swap { display: inline-block; animation: metricSwap 0.45s ease both; }

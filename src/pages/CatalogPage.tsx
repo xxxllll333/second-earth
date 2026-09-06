@@ -7,14 +7,17 @@ import Catalog3D, { CatalogFilter } from '../components/Catalog3D'
 import PlanetDetailModal from '../components/PlanetDetailModal'
 import { keyPlanets, PlanetData } from '../data/planets'
 import { THEME } from '../config/visuals'
+import { useIsMobile } from '../lib/useIsMobile'
 
 const categoryOptions = ['全部', '主角', '候选宜居', '已否决', '一般']
 
 export default function CatalogPage() {
+  const isMobile = useIsMobile()
   const [habitableOnly, setHabitableOnly] = useState(false)
   const [category, setCategory] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selected, setSelected] = useState<PlanetData | null>(null)
+  const [mode, setMode] = useState<'explore' | 'gallery'>('explore')
 
   const filter: CatalogFilter = useMemo(
     () => ({ habitableOnly, category }),
@@ -38,27 +41,52 @@ export default function CatalogPage() {
         searchQuery={searchQuery}
         selectedName={selected?.name ?? null}
         onSelect={setSelected}
+        mode={mode}
       />
+
+      {/* 探索 / 展陈 模式切换 */}
+      <div style={{
+        position: 'absolute', top: isMobile ? 62 : 76, right: isMobile ? 12 : 20, zIndex: 50, display: 'flex',
+        border: `1px solid ${THEME.panelBorder}`, borderRadius: THEME.cardRadius,
+        overflow: 'hidden', background: THEME.panelBg,
+      }}>
+        {([['explore', '探索模式'], ['gallery', '展陈模式']] as const).map(([m, label]) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            style={{
+              padding: isMobile ? '6px 10px' : '8px 18px', border: 'none', cursor: 'pointer',
+              background: mode === m ? 'rgba(32,235,243,0.14)' : 'transparent',
+              color: mode === m ? THEME.accentCyan : THEME.textSecondary,
+              fontFamily: THEME.monoFont, fontSize: isMobile ? '0.6rem' : '0.68rem', letterSpacing: isMobile ? '0.06em' : '0.12em',
+              transition: 'background 0.2s, color 0.2s',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       {/* 筛选面板 */}
       <div style={{
         position: 'absolute',
-        top: 76,
-        left: 20,
-        width: 244,
+        top: isMobile ? 104 : 76,
+        left: isMobile ? 12 : 20,
+        width: isMobile ? 'calc(100vw - 24px)' : 244,
+        maxWidth: isMobile ? 320 : undefined,
         background: THEME.panelBg,
-        backdropFilter: 'blur(12px)',
         border: `1px solid ${THEME.panelBorder}`,
-        borderRadius: 8,
-        padding: 18,
+        borderRadius: THEME.cardRadius,
+        padding: isMobile ? 14 : 18,
         zIndex: 50,
       }}>
         <div style={{
-          color: THEME.textFaint,
-          fontSize: '0.58rem',
-          letterSpacing: '0.3em',
+          color: THEME.accentCyan,
+          fontSize: '0.66rem',
+          letterSpacing: '0.18em',
           textTransform: 'uppercase',
-          fontFamily: THEME.monoFont,
+          fontFamily: THEME.displayFont,
+          textShadow: THEME.labelGlow,
           marginBottom: 12,
         }}>
           Catalog · 筛选
@@ -138,22 +166,25 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      {/* 操作提示 */}
+      {/* 操作提示（两种模式通用）*/}
       <div style={{
         position: 'absolute',
-        bottom: 22,
+        bottom: isMobile ? 16 : 22,
         left: '50%',
         transform: 'translateX(-50%)',
+        width: isMobile ? '90vw' : undefined,
+        textAlign: 'center',
         color: THEME.textFaint,
-        fontSize: '0.7rem',
+        fontSize: isMobile ? '0.62rem' : '0.7rem',
         letterSpacing: '0.1em',
         pointerEvents: 'none',
-        whiteSpace: 'nowrap',
+        whiteSpace: isMobile ? 'normal' : 'nowrap',
+        lineHeight: 1.6,
       }}>
-        拖拽旋转 · 滚轮推拉缩放 · 右键平移 · 点击星球查看档案
+        {isMobile ? '拖拽旋转 · 双指缩放 · 点击星球查看档案' : '拖拽旋转 · 滚轮推拉缩放 · 右键平移 · 点击星球查看档案'}
       </div>
 
-      {/* 回到总览（选中后出现） */}
+      {/* 回到总览（选中后出现，两种模式通用）*/}
       {selected && (
         <button
           onClick={() => setSelected(null)}
@@ -163,7 +194,6 @@ export default function CatalogPage() {
             right: 28,
             padding: '8px 16px',
             background: THEME.panelBg,
-            backdropFilter: 'blur(8px)',
             border: '1px solid rgba(186,198,232,0.3)',
             borderRadius: 3,
             color: THEME.textPrimary,

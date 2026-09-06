@@ -38,7 +38,7 @@ apscheduler==3.11.0                    # 用于定时轮询 NASA/MAST 触发回�
 # ==========================================
 # 5. MCP 技能包标准协议 SDK
 # ==========================================
-mcp==1.1.2                             # 官方 Model Context Protocol SDK
+mcp==2.1.1                             # 官方 Model Context Protocol SDK (2.x: FastMCP→MCPServer)
 
 # ==========================================
 # 6. 测试与代码质量 (开发/CI 环境)

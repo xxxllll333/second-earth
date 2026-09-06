@@ -1,6 +1,6 @@
-// BgmPlayer：旅程页宇宙氛围背景音乐（COBALT · Kevin MacLeod，CC BY 4.0，署名见 README）
+// BgmPlayer：全局常驻宇宙氛围背景音乐（COBALT · Kevin MacLeod，CC BY 4.0，署名见 README）
 // 自动播放：加载后立即尝试；被浏览器策略拦截时，等待第一次用户交互（滚动/点击等）自动开始
-// 指示器：右上角 SOUND 按钮——播放中 3 条跳动波形，点击可暂停/恢复
+// 指示器：导航栏右侧 SOUND 按钮——播放中 3 条跳动波形，点击可暂停/恢复
 // 裁剪：跳过约 20 秒前奏，播至曲目结尾后无缝跳回循环
 import { useEffect, useRef, useState } from 'react'
 import cobalt from '../assets/audio/cobalt.ogg'
@@ -13,7 +13,7 @@ const btnStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: 8,
   padding: '9px 14px',
-  background: 'rgba(12,13,22,0.62)',
+  background: 'rgba(10,11,18,0.82)',
   border: '1px solid rgba(186,198,232,0.24)',
   borderRadius: 3,
   color: 'rgba(216,224,244,0.92)',
@@ -23,8 +23,6 @@ const btnStyle: React.CSSProperties = {
   fontFamily: "'Jost Variable', 'Jost', 'Segoe UI', sans-serif",
   fontWeight: 450,
   cursor: 'pointer',
-  backdropFilter: 'blur(6px)',
-  WebkitBackdropFilter: 'blur(6px)',
   whiteSpace: 'nowrap',
 }
 
@@ -145,7 +143,7 @@ export default function BgmPlayer() {
       `}</style>
       <button
         className="bgm-btn"
-        style={{ ...btnStyle, position: 'fixed', top: 84, right: 24, zIndex: 60 }}
+        style={{ ...btnStyle, position: 'fixed', top: 11, right: 24, zIndex: 101 }}
         onClick={toggle}
         aria-label={playing ? 'pause sound' : 'play sound'}
       >

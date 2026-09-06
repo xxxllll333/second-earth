@@ -10,5 +10,12 @@ export default defineConfig({
     watch: {
       ignored: ['**/src/assets/**'],
     },
+    // 开发代理：前端请求同源相对路径 /api → 转发到本机后端，彻底规避 CORS（与 dev 端口无关）
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
   },
 })
