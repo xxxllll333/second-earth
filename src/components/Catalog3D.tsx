@@ -547,7 +547,6 @@ function StellarNeighborhood() {
           )}
           <Html position={[0, s.size * 0.55 + 0.8, 0]} center distanceFactor={110} zIndexRange={[12, 0]} style={{ pointerEvents: 'none' }}>
             <div style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-              <div style={{ fontFamily: THEME.cjkFont, fontSize: '0.46rem', letterSpacing: '0.06em', color: THEME.textPrimary, textShadow: '0 0 6px rgba(0,0,0,0.9)' }}>{s.cn}</div>
               <div style={{ fontFamily: THEME.monoFont, fontSize: '0.5rem', color: THEME.textSecondary, opacity: 0.75 }}>{s.dist} ly · {s.en}</div>
             </div>
           </Html>
@@ -625,7 +624,6 @@ function GouldBelt() {
           )}
           <Html position={[0, o.size * 0.9 + 1.4 + (oi % 3) * 1.6, 0]} center distanceFactor={150} zIndexRange={[12, 0]} style={{ pointerEvents: 'none' }}>
             <div style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-              <div style={{ fontFamily: THEME.cjkFont, fontSize: '0.46rem', letterSpacing: '0.06em', color: THEME.textPrimary, textShadow: '0 0 6px rgba(0,0,0,0.9)' }}>{o.cn}</div>
               <div style={{ fontFamily: THEME.monoFont, fontSize: '0.5rem', color: THEME.textSecondary, opacity: 0.75 }}>{o.dist} ly · {o.en}</div>
             </div>
           </Html>

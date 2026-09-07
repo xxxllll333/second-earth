@@ -10,6 +10,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { THEME } from '../config/visuals'
+import { glowTexture } from './proceduralPlanet'
 import type { PlanetData } from '../data/planets'
 
 const GAP = 0.9 // 两球表面间距（世界单位）
@@ -37,22 +38,16 @@ uniform vec3 uColor;
 uniform float uPower;
 uniform float uFill;
 uniform float uSpin;
-uniform vec3 uLight;
 varying vec3 vN;
 varying vec3 vV;
 varying vec3 vNo;
 void main() {
-  vec3 nN = normalize(vN);
-  vec3 nV = normalize(vV);
-  float f = pow(1.0 - abs(dot(nN, nV)), uPower);
+  float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uPower);
   // 磨砂云斑：定义在物体空间（固着球面），随模型自转整体扫过 = 可见旋转
   // （旧版用视空间法线：正交投影下屏幕每像素的视空间法线恒定，图案钉死在屏幕上不转）
   float n = sin(vNo.x * 3.5 + uSpin) * sin(vNo.y * 3.0 - uSpin * 0.6) * sin(vNo.z * 4.0 + uSpin * 0.3);
   float fill = uFill * max(n, 0.0);
-  // 侧面辉光：菲涅尔边缘 × 侧光朝向项 → 亮弧只集中在朝光一侧球缘（参考图的大气散射切弧）
-  float side = pow(max(dot(nN, normalize(uLight)), 0.0), 2.5);
-  float glow = f * side * 1.6;
-  float a = clamp(f * 0.35 + fill + glow, 0.0, 1.0);
+  float a = clamp(f * 0.6 + fill, 0.0, 1.0);
   gl_FragColor = vec4(uColor, a);
 }
 `
@@ -64,7 +59,7 @@ const hexRgb = (hex: string): THREE.Vector3 => {
 
 // 单一帧内仿真：阻尼收敛当前半径 → 派生全部布局与相机（无瞬移）
 function Scene({ rE, rP, planetRadius, color, showTicks }: { rE: number; rP: number; planetRadius: number; color: string; showTicks: boolean }) {
-  const earthRef = useRef<THREE.Mesh>(null)
+  const earthRef = useRef<THREE.Group>(null)
   const planetRef = useRef<THREE.Group>(null)
   const labelERef = useRef<THREE.Group>(null)
   const labelPRef = useRef<THREE.Group>(null)
@@ -74,8 +69,10 @@ function Scene({ rE, rP, planetRadius, color, showTicks }: { rE: number; rP: num
   const sim = useRef({ e: rE, p: rP })
   // 磨砂絮状相位（恒定 0：絮状固着球面，只随模型自转移动 = 可见旋转）
   const spin = useRef({ value: 0 })
-  const uniE = useMemo(() => ({ uColor: { value: new THREE.Vector3(1, 1, 1) }, uPower: { value: 2.2 }, uFill: { value: 0.25 }, uSpin: spin.current, uLight: { value: new THREE.Vector3(-0.6, 0.55, -0.35) } }), [])
-  const uniP = useMemo(() => ({ uColor: { value: hexRgb(color) }, uPower: { value: 2.2 }, uFill: { value: 0.25 }, uSpin: spin.current, uLight: { value: new THREE.Vector3(-0.6, 0.55, -0.35) } }), [color])
+  const uniE = useMemo(() => ({ uColor: { value: new THREE.Vector3(1, 1, 1) }, uPower: { value: 2.2 }, uFill: { value: 0.25 }, uSpin: spin.current }), [])
+  const uniP = useMemo(() => ({ uColor: { value: hexRgb(color) }, uPower: { value: 2.2 }, uFill: { value: 0.25 }, uSpin: spin.current }), [color])
+  // 球后背光辉光贴图（球后偏移加色 sprite，球体写深度遮住轮廓内部分 = 紧贴球缘的弧光）
+  const glowTex = useMemo(glowTexture, [])
 
   useFrame((state, dt) => {
     const s = sim.current
@@ -150,15 +147,24 @@ function Scene({ rE, rP, planetRadius, color, showTicks }: { rE: number; rP: num
           </mesh>
         )
       })}
-      <mesh ref={earthRef}>
-        <sphereGeometry args={[1, 64, 64]} />
-        <shaderMaterial transparent depthWrite={false} blending={THREE.AdditiveBlending} uniforms={uniE} vertexShader={HOLO_VERT} fragmentShader={HOLO_FRAG} />
-      </mesh>
+      <group ref={earthRef}>
+        {/* 背光辉光：球后偏移、球体深度遮住轮廓内 → 只露紧贴球缘的弧光（无科学原理、纯美学，呼应上方标签色） */}
+        <sprite renderOrder={2} position={[-0.35, 0.32, -1.2]} scale={[2.4, 2.4, 1]}>
+          <spriteMaterial map={glowTex} color="#ffffff" blending={THREE.AdditiveBlending} transparent opacity={0.6} depthWrite={false} />
+        </sprite>
+        <mesh renderOrder={1}>
+          <sphereGeometry args={[1, 64, 64]} />
+          <shaderMaterial transparent depthWrite blending={THREE.AdditiveBlending} uniforms={uniE} vertexShader={HOLO_VERT} fragmentShader={HOLO_FRAG} />
+        </mesh>
+      </group>
       {/* 系外行星：主题青磨砂发光玻璃球（与地球同质感，仅色不同） */}
       <group ref={planetRef}>
-        <mesh>
+        <sprite renderOrder={2} position={[-0.35, 0.32, -1.2]} scale={[2.4, 2.4, 1]}>
+          <spriteMaterial map={glowTex} color={color} blending={THREE.AdditiveBlending} transparent opacity={0.6} depthWrite={false} />
+        </sprite>
+        <mesh renderOrder={1}>
           <sphereGeometry args={[1, 64, 64]} />
-          <shaderMaterial transparent depthWrite={false} blending={THREE.AdditiveBlending} uniforms={uniP} vertexShader={HOLO_VERT} fragmentShader={HOLO_FRAG} />
+          <shaderMaterial transparent depthWrite blending={THREE.AdditiveBlending} uniforms={uniP} vertexShader={HOLO_VERT} fragmentShader={HOLO_FRAG} />
         </mesh>
       </group>
       {/* 顶置倍数标签：挂在逐帧移动的 group 上，跟随球顶不瞬移 */}
