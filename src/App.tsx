@@ -4,6 +4,7 @@
 import { Routes, Route } from 'react-router-dom'
 import NavBar from './components/NavBar'
 import BgmPlayer from './components/BgmPlayer'
+import InputViz from './components/InputViz'
 import JourneyPage from './pages/JourneyPage'
 import CatalogPage from './pages/CatalogPage'
 import GalaxyPage from './pages/GalaxyPage'
@@ -17,6 +18,8 @@ function App() {
     <>
       <NavBar />
       <BgmPlayer />
+      {/* 录屏辅助浮层：仅 URL 带 ?keys=1 时可见 */}
+      <InputViz />
       <Routes>
         <Route path="/" element={<JourneyPage />} />
         <Route path="/catalog" element={<CatalogPage />} />
