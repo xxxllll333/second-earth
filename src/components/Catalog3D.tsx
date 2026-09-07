@@ -565,19 +565,72 @@ function StellarNeighborhood() {
   )
 }
 
-// ── 古尔德带（本地泡↔猎户旋臂之间的新层级）：约 3000 光年宽的年轻恒星倾斜环带 ──
-// 真实古尔德带相对银道面倾斜约 18°，太阳位于带内；环带半径介于本地泡壳（48）与银臂内缘之间。
-// 极淡加色环带 + 边缘微标签：拉升飞行时多一级“尺度台阶”，叙事上衔接本地泡与猎户旋臂。
+// ── 古尔德带（本地泡↔猎户旋臂之间的新层级）：真实年轻星团与星云 ──
+// 成员均为真实古尔德带天体：方向 = J2000 赤道坐标（与本地泡同 equatorialToGalactic 口径），
+// 距离 153–2700 光年对数映射到半径带 86–112；真实方向自然落在倾斜约 18° 的带面上，无需人造倾斜。
+// 疏散星团 = 蓝白星点簇（昴星团/毕星团/蜂巢星团）；星形成区 = 彩色星云（猎户/马头红、M78 蓝）。
+const GB = { rMin: 86, rMax: 112, dMin: 150, dMax: 2800 }
+interface GouldObj { cn: string; en: string; dist: number; ra: number; dec: number; kind: 'cluster' | 'nebula'; color: string; size: number }
+const GOULD_OBJECTS: GouldObj[] = [
+  { cn: '昴星团', en: 'M45 Pleiades', dist: 444, ra: 56.75, dec: 24.12, kind: 'cluster', color: '#bcd4ff', size: 2.6 },
+  { cn: '毕星团', en: 'Hyades', dist: 153, ra: 66.75, dec: 15.87, kind: 'cluster', color: '#ffe9c4', size: 2.2 },
+  { cn: '英仙α星团', en: 'Melotte 20', dist: 520, ra: 51.0, dec: 49.0, kind: 'cluster', color: '#cadcff', size: 2.4 },
+  { cn: '蜂巢星团', en: 'M44 Praesepe', dist: 577, ra: 130.1, dec: 19.67, kind: 'cluster', color: '#e8ecff', size: 2.0 },
+  { cn: '猎户座大星云', en: 'M42', dist: 1344, ra: 83.82, dec: -5.39, kind: 'nebula', color: '#ff8f7a', size: 3.4 },
+  { cn: '马头星云', en: 'IC 434', dist: 1375, ra: 85.25, dec: -2.46, kind: 'nebula', color: '#e06a5a', size: 2.6 },
+  { cn: 'M78', en: 'M78', dist: 1350, ra: 86.68, dec: 0.05, kind: 'nebula', color: '#9fc0ff', size: 2.2 },
+  { cn: '英仙分子云', en: 'Perseus MC', dist: 1000, ra: 53.0, dec: 32.0, kind: 'nebula', color: '#8f9fe0', size: 3.0 },
+  { cn: '蛇夫分子云', en: 'Ophiuchus MC', dist: 460, ra: 247.0, dec: -8.0, kind: 'nebula', color: '#b08fd0', size: 3.0 },
+  { cn: '圣诞树星团', en: 'NGC 2264', dist: 2700, ra: 100.9, dec: 9.9, kind: 'cluster', color: '#ffd2c4', size: 2.2 },
+]
+
 function GouldBelt() {
+  const glowTex = useMemo(glowTexture, [])
+  const objs = useMemo(() => GOULD_OBJECTS.map((o, oi) => {
+    const { l, b } = equatorialToGalactic(o.ra, o.dec)
+    const theta = PHI0 + l * DEG2RAD
+    const bb = b * DEG2RAD
+    const t = Math.max(0, Math.min(1, (Math.log(o.dist) - Math.log(GB.dMin)) / (Math.log(GB.dMax) - Math.log(GB.dMin))))
+    const r = GB.rMin + t * (GB.rMax - GB.rMin)
+    const pos = new THREE.Vector3(Math.cos(bb) * Math.sin(theta) * r, Math.sin(bb) * r, Math.cos(bb) * Math.cos(theta) * r)
+    // 星团星点：种子随机聚簇偏移（确定性，帧间不跳）
+    const rand = seededRandom('gb' + oi)
+    const members = Array.from({ length: 12 }, () => new THREE.Vector3((rand() - 0.5) * o.size, (rand() - 0.5) * o.size * 0.8, (rand() - 0.5) * o.size))
+    return { ...o, pos, members, nebTex: o.kind === 'nebula' ? nebulaTexture(oi * 31 + 7) : null }
+  }), [])
   return (
-    <group rotation={[0.32, 0, 0.18]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[86, 112, 128]} />
-        <meshBasicMaterial color="#9fb8ff" transparent opacity={0.06} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </mesh>
-      <Html position={[99, 4, 0]} center distanceFactor={160} zIndexRange={[12, 0]} style={{ pointerEvents: 'none' }}>
-        <div style={{ fontFamily: THEME.monoFont, fontSize: '0.5rem', letterSpacing: '0.14em', color: THEME.textSecondary, opacity: 0.7, whiteSpace: 'nowrap' }}>古尔德带 · GOULD BELT</div>
-      </Html>
+    <group>
+      {objs.map((o, oi) => (
+        <group key={o.en} position={o.pos}>
+          {o.nebTex ? (
+            <>
+              <sprite scale={[o.size * 5, o.size * 5, 1]}>
+                <spriteMaterial map={o.nebTex} color={o.color} blending={THREE.AdditiveBlending} transparent opacity={0.5} depthWrite={false} />
+              </sprite>
+              <sprite scale={[o.size * 1.4, o.size * 1.4, 1]}>
+                <spriteMaterial map={glowTex} color="#ffffff" blending={THREE.AdditiveBlending} transparent opacity={0.5} depthWrite={false} />
+              </sprite>
+            </>
+          ) : (
+            <>
+              {o.members.map((m, i) => (
+                <sprite key={i} position={m} scale={[0.45 + (i % 4) * 0.16, 0.45 + (i % 4) * 0.16, 1]}>
+                  <spriteMaterial map={glowTex} color={o.color} blending={THREE.AdditiveBlending} transparent opacity={0.9} depthWrite={false} />
+                </sprite>
+              ))}
+              <sprite scale={[o.size * 2.4, o.size * 2.4, 1]}>
+                <spriteMaterial map={glowTex} color={o.color} blending={THREE.AdditiveBlending} transparent opacity={0.14} depthWrite={false} />
+              </sprite>
+            </>
+          )}
+          <Html position={[0, o.size * 0.9 + 1.4 + (oi % 3) * 1.6, 0]} center distanceFactor={150} zIndexRange={[12, 0]} style={{ pointerEvents: 'none' }}>
+            <div style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+              <div style={{ fontFamily: THEME.cjkFont, fontSize: '0.46rem', letterSpacing: '0.06em', color: THEME.textPrimary, textShadow: '0 0 6px rgba(0,0,0,0.9)' }}>{o.cn}</div>
+              <div style={{ fontFamily: THEME.monoFont, fontSize: '0.5rem', color: THEME.textSecondary, opacity: 0.75 }}>{o.dist} ly · {o.en}</div>
+            </div>
+          </Html>
+        </group>
+      ))}
     </group>
   )
 }
@@ -632,7 +685,7 @@ const MILESTONES = [
   { en: 'Solar System', cn: '太阳系 · 一颗恒星、八颗行星，我们的家园' },
   { en: 'Stellar Neighborhood', cn: `星际邻居 · 太阳 12 光年内只有 ${NEIGHBOR_STARS.length} 颗恒星——天狼星、比邻星都在隔壁` },
   { en: 'Local Bubble', cn: `本地泡 · ${keyPlanets.length} 颗系外行星散布在太阳周围（${DIST_MIN}–${DIST_MAX} 光年）` },
-  { en: 'Gould Belt', cn: '古尔德带 · 环抱本地泡的年轻恒星与星形成带，宽约 3000 光年' },
+  { en: 'Gould Belt', cn: '古尔德带 · 昴星团、猎户座大星云等环抱本地泡的年轻星团与星形成带，宽约 3000 光年' },
   { en: 'The Orion Arm', cn: '猎户旋臂 · 穿越数万颗恒星的星海' },
   { en: 'Milky Way', cn: '银河全景 · 我们找到的一切，仅是其中一点' },
 ]
