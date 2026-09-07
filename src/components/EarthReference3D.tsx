@@ -37,16 +37,22 @@ uniform vec3 uColor;
 uniform float uPower;
 uniform float uFill;
 uniform float uSpin;
+uniform vec3 uLight;
 varying vec3 vN;
 varying vec3 vV;
 varying vec3 vNo;
 void main() {
-  float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uPower);
+  vec3 nN = normalize(vN);
+  vec3 nV = normalize(vV);
+  float f = pow(1.0 - abs(dot(nN, nV)), uPower);
   // 磨砂云斑：定义在物体空间（固着球面），随模型自转整体扫过 = 可见旋转
   // （旧版用视空间法线：正交投影下屏幕每像素的视空间法线恒定，图案钉死在屏幕上不转）
   float n = sin(vNo.x * 3.5 + uSpin) * sin(vNo.y * 3.0 - uSpin * 0.6) * sin(vNo.z * 4.0 + uSpin * 0.3);
   float fill = uFill * max(n, 0.0);
-  float a = clamp(f * 0.6 + fill, 0.0, 1.0);
+  // 侧面辉光：菲涅尔边缘 × 侧光朝向项 → 亮弧只集中在朝光一侧球缘（参考图的大气散射切弧）
+  float side = pow(max(dot(nN, normalize(uLight)), 0.0), 2.5);
+  float glow = f * side * 1.6;
+  float a = clamp(f * 0.35 + fill + glow, 0.0, 1.0);
   gl_FragColor = vec4(uColor, a);
 }
 `
@@ -68,8 +74,8 @@ function Scene({ rE, rP, planetRadius, color, showTicks }: { rE: number; rP: num
   const sim = useRef({ e: rE, p: rP })
   // 磨砂絮状相位（恒定 0：絮状固着球面，只随模型自转移动 = 可见旋转）
   const spin = useRef({ value: 0 })
-  const uniE = useMemo(() => ({ uColor: { value: new THREE.Vector3(1, 1, 1) }, uPower: { value: 2.2 }, uFill: { value: 0.25 }, uSpin: spin.current }), [])
-  const uniP = useMemo(() => ({ uColor: { value: hexRgb(color) }, uPower: { value: 2.2 }, uFill: { value: 0.25 }, uSpin: spin.current }), [color])
+  const uniE = useMemo(() => ({ uColor: { value: new THREE.Vector3(1, 1, 1) }, uPower: { value: 2.2 }, uFill: { value: 0.25 }, uSpin: spin.current, uLight: { value: new THREE.Vector3(-0.6, 0.55, -0.35) } }), [])
+  const uniP = useMemo(() => ({ uColor: { value: hexRgb(color) }, uPower: { value: 2.2 }, uFill: { value: 0.25 }, uSpin: spin.current, uLight: { value: new THREE.Vector3(-0.6, 0.55, -0.35) } }), [color])
 
   useFrame((state, dt) => {
     const s = sim.current
