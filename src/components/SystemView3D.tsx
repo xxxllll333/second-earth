@@ -262,13 +262,19 @@ function CameraRig({
   const focusPos = useMemo(() => new THREE.Vector3(), [])
   const dirRef = useRef(new THREE.Vector3(0, 0.5, 1)) // 聚焦观察方向：首次聚焦时从当前视角锁定
   const dirLockedRef = useRef(false)
+  // 帧率无关向量平滑：lerp(0.1) 在高刷屏上收敛过快发硌 = 抖动感来源
+  const dampTo = (v: THREE.Vector3, t: THREE.Vector3, lam: number, dt: number) => {
+    v.x = THREE.MathUtils.damp(v.x, t.x, lam, dt)
+    v.y = THREE.MathUtils.damp(v.y, t.y, lam, dt)
+    v.z = THREE.MathUtils.damp(v.z, t.z, lam, dt)
+  }
 
   // 聚焦目标变化（换行星/换系统）→ 重新锁定观察方向，飞行路径从用户当前视角出发
   useEffect(() => {
     dirLockedRef.current = false
   }, [focusName])
 
-  useFrame((state) => {
+  useFrame((state, dt) => {
     const controls = controlsRef.current
     if (!controls) return
     if (focusName) {
@@ -284,12 +290,12 @@ function CameraRig({
         // 飞行距离随行星大小缩放；目标点每帧随公转更新，相机持续跟拍
         const dist = Math.max(p.radius * 2.6 + 3.2, 4.5)
         const desired = focusPos.clone().add(dirRef.current.clone().multiplyScalar(dist))
-        controls.target.lerp(focusPos, 0.1)
-        camera.position.lerp(desired, 0.1)
+        dampTo(controls.target, focusPos, 4, dt)
+        dampTo(camera.position, desired, 4, dt)
       }
     } else if (resetting) {
-      controls.target.lerp(ORIGIN, 0.1)
-      camera.position.lerp(HOME, 0.08)
+      dampTo(controls.target, ORIGIN, 3, dt)
+      dampTo(camera.position, HOME, 3, dt)
     }
     controls.update()
   })

@@ -547,7 +547,7 @@ function StellarNeighborhood() {
           )}
           <Html position={[0, s.size * 0.55 + 0.8, 0]} center distanceFactor={110} zIndexRange={[12, 0]} style={{ pointerEvents: 'none' }}>
             <div style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-              <div style={{ fontFamily: THEME.displayFont, fontSize: '0.58rem', letterSpacing: '0.06em', color: s.color, textShadow: '0 0 6px rgba(0,0,0,0.9)' }}>{s.cn}</div>
+              <div style={{ fontFamily: THEME.cjkFont, fontSize: '0.46rem', letterSpacing: '0.06em', color: THEME.textPrimary, textShadow: '0 0 6px rgba(0,0,0,0.9)' }}>{s.cn}</div>
               <div style={{ fontFamily: THEME.monoFont, fontSize: '0.5rem', color: THEME.textSecondary, opacity: 0.75 }}>{s.dist} ly · {s.en}</div>
             </div>
           </Html>
@@ -560,6 +560,23 @@ function StellarNeighborhood() {
       </mesh>
       <Html position={[ring10, 0.5, 0]} center distanceFactor={110} zIndexRange={[12, 0]} style={{ pointerEvents: 'none' }}>
         <div style={{ fontFamily: THEME.monoFont, fontSize: '0.5rem', letterSpacing: '0.12em', color: THEME.accentCyan, opacity: 0.6, whiteSpace: 'nowrap' }}>10 光年</div>
+      </Html>
+    </group>
+  )
+}
+
+// ── 古尔德带（本地泡↔猎户旋臂之间的新层级）：约 3000 光年宽的年轻恒星倾斜环带 ──
+// 真实古尔德带相对银道面倾斜约 18°，太阳位于带内；环带半径介于本地泡壳（48）与银臂内缘之间。
+// 极淡加色环带 + 边缘微标签：拉升飞行时多一级“尺度台阶”，叙事上衔接本地泡与猎户旋臂。
+function GouldBelt() {
+  return (
+    <group rotation={[0.32, 0, 0.18]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[86, 112, 128]} />
+        <meshBasicMaterial color="#9fb8ff" transparent opacity={0.06} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
+      <Html position={[99, 4, 0]} center distanceFactor={160} zIndexRange={[12, 0]} style={{ pointerEvents: 'none' }}>
+        <div style={{ fontFamily: THEME.monoFont, fontSize: '0.5rem', letterSpacing: '0.14em', color: THEME.textSecondary, opacity: 0.7, whiteSpace: 'nowrap' }}>古尔德带 · GOULD BELT</div>
       </Html>
     </group>
   )
@@ -586,12 +603,13 @@ export const VIEW_CLUSTER = {
   target: new THREE.Vector3(0, 0, 0),
 }
 
-// 引导飞行关键帧（绝对坐标）：地球近景 → 太阳系全景 → 星际邻居 → 本地泡 → 拉升穿越猎户旋臂 → 银河俯瞰全景
+// 引导飞行关键帧（绝对坐标）：地球近景 → 太阳系全景 → 星际邻居 → 本地泡 → 古尔德带 → 拉升穿越猎户旋臂 → 银河俯瞰全景
 const FLIGHT_POS = [
   new THREE.Vector3(EARTH_POS.x + 1.0, EARTH_POS.y + 0.5, EARTH_POS.z + 1.3),
   new THREE.Vector3(SUN_OFFSET.x, SUN_OFFSET.y + 10, SUN_OFFSET.z + 30),
   new THREE.Vector3(SUN_OFFSET.x, SUN_OFFSET.y + 26, SUN_OFFSET.z + 60),
   new THREE.Vector3(SUN_OFFSET.x, SUN_OFFSET.y + 46, SUN_OFFSET.z + 96),
+  new THREE.Vector3(SUN_OFFSET.x * 0.8, 75, SUN_OFFSET.z * 0.8 + 125),
   new THREE.Vector3(SUN_OFFSET.x * 0.55, 120, SUN_OFFSET.z * 0.55 + 170),
   VIEW_GALAXY.pos.clone(),
 ]
@@ -600,6 +618,7 @@ const FLIGHT_TARGET = [
   SUN_OFFSET.clone(),
   SUN_OFFSET.clone(),
   SUN_OFFSET.clone(),
+  new THREE.Vector3(SUN_OFFSET.x * 0.65, 0, SUN_OFFSET.z * 0.65),
   new THREE.Vector3(SUN_OFFSET.x * 0.35, 0, SUN_OFFSET.z * 0.35),
   new THREE.Vector3(0, 0, 0),
 ]
@@ -613,16 +632,18 @@ const MILESTONES = [
   { en: 'Solar System', cn: '太阳系 · 一颗恒星、八颗行星，我们的家园' },
   { en: 'Stellar Neighborhood', cn: `星际邻居 · 太阳 12 光年内只有 ${NEIGHBOR_STARS.length} 颗恒星——天狼星、比邻星都在隔壁` },
   { en: 'Local Bubble', cn: `本地泡 · ${keyPlanets.length} 颗系外行星散布在太阳周围（${DIST_MIN}–${DIST_MAX} 光年）` },
+  { en: 'Gould Belt', cn: '古尔德带 · 环抱本地泡的年轻恒星与星形成带，宽约 3000 光年' },
   { en: 'The Orion Arm', cn: '猎户旋臂 · 穿越数万颗恒星的星海' },
   { en: 'Milky Way', cn: '银河全景 · 我们找到的一切，仅是其中一点' },
 ]
 function milestoneFor(t: number): number {
-  if (t < 0.10) return 0
-  if (t < 0.26) return 1
-  if (t < 0.40) return 2
-  if (t < 0.58) return 3
-  if (t < 0.78) return 4
-  return 5
+  if (t < 0.09) return 0
+  if (t < 0.22) return 1
+  if (t < 0.34) return 2
+  if (t < 0.48) return 3
+  if (t < 0.62) return 4
+  if (t < 0.80) return 5
+  return 6
 }
 function easeInOut(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
@@ -853,6 +874,8 @@ export default function Catalog3D({ filter, searchQuery, selectedName, onSelect,
               <sphereGeometry args={[BUBBLE.rMax, 32, 24]} />
               <meshBasicMaterial color={THEME.accentCyan} transparent opacity={0.035} side={THREE.BackSide} blending={THREE.AdditiveBlending} depthWrite={false} />
             </mesh>
+            {/* 古尔德带：本地泡与猎户旋臂之间的新尺度层级 */}
+            <GouldBelt />
             <Html position={[0, 14, 0]} center distanceFactor={150} zIndexRange={[15, 0]}>
               <div
                 onClick={openSolar}
