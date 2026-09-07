@@ -10,7 +10,6 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { THEME } from '../config/visuals'
-import { glowTexture } from './proceduralPlanet'
 import type { PlanetData } from '../data/planets'
 
 const GAP = 0.9 // 两球表面间距（世界单位）
@@ -71,8 +70,6 @@ function Scene({ rE, rP, planetRadius, color, showTicks }: { rE: number; rP: num
   const spin = useRef({ value: 0 })
   const uniE = useMemo(() => ({ uColor: { value: new THREE.Vector3(1, 1, 1) }, uPower: { value: 2.2 }, uFill: { value: 0.25 }, uSpin: spin.current }), [])
   const uniP = useMemo(() => ({ uColor: { value: hexRgb(color) }, uPower: { value: 2.2 }, uFill: { value: 0.25 }, uSpin: spin.current }), [color])
-  // 球后背光辉光贴图（球后偏移加色 sprite，球体写深度遮住轮廓内部分 = 紧贴球缘的弧光）
-  const glowTex = useMemo(glowTexture, [])
 
   useFrame((state, dt) => {
     const s = sim.current
@@ -148,23 +145,16 @@ function Scene({ rE, rP, planetRadius, color, showTicks }: { rE: number; rP: num
         )
       })}
       <group ref={earthRef}>
-        {/* 背光辉光：球后偏移、球体深度遮住轮廓内 → 只露紧贴球缘的弧光（无科学原理、纯美学，呼应上方标签色） */}
-        <sprite renderOrder={2} position={[-0.35, 0.32, -1.2]} scale={[2.4, 2.4, 1]}>
-          <spriteMaterial map={glowTex} color="#ffffff" blending={THREE.AdditiveBlending} transparent opacity={0.6} depthWrite={false} />
-        </sprite>
-        <mesh renderOrder={1}>
+        <mesh>
           <sphereGeometry args={[1, 64, 64]} />
-          <shaderMaterial transparent depthWrite blending={THREE.AdditiveBlending} uniforms={uniE} vertexShader={HOLO_VERT} fragmentShader={HOLO_FRAG} />
+          <shaderMaterial transparent depthWrite={false} blending={THREE.AdditiveBlending} uniforms={uniE} vertexShader={HOLO_VERT} fragmentShader={HOLO_FRAG} />
         </mesh>
       </group>
-      {/* 系外行星：主题青磨砂发光玻璃球（与地球同质感，仅色不同） */}
+      {/* 系外行星：与地球同质感的磨砂发光玻璃球，仅色不同 */}
       <group ref={planetRef}>
-        <sprite renderOrder={2} position={[-0.35, 0.32, -1.2]} scale={[2.4, 2.4, 1]}>
-          <spriteMaterial map={glowTex} color={color} blending={THREE.AdditiveBlending} transparent opacity={0.6} depthWrite={false} />
-        </sprite>
-        <mesh renderOrder={1}>
+        <mesh>
           <sphereGeometry args={[1, 64, 64]} />
-          <shaderMaterial transparent depthWrite blending={THREE.AdditiveBlending} uniforms={uniP} vertexShader={HOLO_VERT} fragmentShader={HOLO_FRAG} />
+          <shaderMaterial transparent depthWrite={false} blending={THREE.AdditiveBlending} uniforms={uniP} vertexShader={HOLO_VERT} fragmentShader={HOLO_FRAG} />
         </mesh>
       </group>
       {/* 顶置倍数标签：挂在逐帧移动的 group 上，跟随球顶不瞬移 */}

@@ -1,6 +1,6 @@
-// InputViz —— 录屏辅助：按键/点击可视化浮层（仅 URL 带 ?keys=1 时启用，评委正常访问不可见）
-// 鼠标键 / 键盘 / 滚轮以主题风格浮chip显示在底部居中，1.4s 自动淡出；最多同屏 5 条。
-// 点击同时在光标处扩散一圈青色涟漪环，让视频里的点击位置一目了然。
+// InputViz —— 点击涟漪（全站常驻）+ 录屏按键字幕（仅 URL 带 ?keys=1 时启用）
+// 涟漪：每次按下鼠标在光标处扩散一圈青色环，正式网页也有，纯交互反馈。
+// 字幕 chip：鼠标键 / 键盘 / 滚轮，右上角黑底 40% 无圆角矩形，1.4s 自动淡出；最多同屏 5 条。
 // 优势：页面内渲染，任何录屏方式（含 Playwright 自动化录屏只录浏览器画面）都能拍到。
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
@@ -55,6 +55,18 @@ export default function InputViz() {
     window.setTimeout(() => URL.revokeObjectURL(url), 4000)
   }
 
+  // 点击涟漪：全站常驻（正式网页也生效），与 keys 字幕模式解耦
+  useEffect(() => {
+    let rid = 0
+    const md = (e: MouseEvent) => {
+      const id = ++rid
+      setRipples((xs) => [...xs.slice(-2), { id, x: e.clientX, y: e.clientY }])
+      window.setTimeout(() => setRipples((xs) => xs.filter((r) => r.id !== id)), 700)
+    }
+    window.addEventListener('mousedown', md, true)
+    return () => window.removeEventListener('mousedown', md, true)
+  }, [])
+
   useEffect(() => {
     if (!on) return
     let seq = 0
@@ -68,9 +80,6 @@ export default function InputViz() {
       const label = MOUSE_NAMES[e.button] ?? `MOUSE ${e.button}`
       log('mouse', label)
       push(label)
-      const rid = ++seq
-      setRipples((xs) => [...xs.slice(-2), { id: rid, x: e.clientX, y: e.clientY }])
-      window.setTimeout(() => setRipples((xs) => xs.filter((r) => r.id !== rid)), 700)
     }
     const kd = (e: KeyboardEvent) => {
       if (e.key === 'F9') {
@@ -99,10 +108,9 @@ export default function InputViz() {
     }
   }, [on]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!on) return null
   return (
     <>
-      {/* 点击涟漪：光标处扩散一圈青色环（纯装饰，不吃指针事件） */}
+      {/* 点击涟漪：光标处扩散一圈青色环（全站常驻，纯装饰，不吃指针事件） */}
       <AnimatePresence>
         {ripples.map((r) => (
           <motion.div
@@ -121,40 +129,40 @@ export default function InputViz() {
         ))}
       </AnimatePresence>
 
-      <div
-        style={{
-          position: 'fixed', left: '50%', bottom: 20, transform: 'translateX(-50%)', zIndex: 9999,
-          display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center',
-          pointerEvents: 'none',
-        }}
-      >
-        <AnimatePresence initial={false}>
-          {items.map((it) => (
-            <motion.div
-              key={it.id}
-              className="mono"
-              initial={{ opacity: 0, y: 8, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.16 }}
-              style={{
-                padding: '5px 14px',
-                background: THEME.panelBg,
-                border: `1px solid ${THEME.panelBorder}`,
-                borderBottom: `2px solid ${THEME.accentCyan}`,
-                color: THEME.textPrimary,
-                fontSize: '0.74rem',
-                letterSpacing: '0.16em',
-                whiteSpace: 'nowrap',
-                backdropFilter: 'blur(6px)',
-                boxShadow: `0 0 14px ${THEME.accentCyan}26`,
-              }}
-            >
-              {it.label}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+      {/* 按键字幕：仅 ?keys=1 录屏模式；右上角（避开导航栏 54px 与 SOUND 按钮），黑底 40% 无圆角 */}
+      {on && (
+        <div
+          style={{
+            position: 'fixed', top: 66, right: 24, zIndex: 9999,
+            display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end',
+            pointerEvents: 'none',
+          }}
+        >
+          <AnimatePresence initial={false}>
+            {items.map((it) => (
+              <motion.div
+                key={it.id}
+                className="mono"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.16 }}
+                style={{
+                  padding: '7px 16px',
+                  background: 'rgba(0,0,0,0.4)',
+                  borderRadius: 0,
+                  color: THEME.textPrimary,
+                  fontSize: '1.05rem',
+                  letterSpacing: '0.12em',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {it.label}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
     </>
   )
 }
