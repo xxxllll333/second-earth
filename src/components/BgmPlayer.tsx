@@ -1,7 +1,8 @@
-// BgmPlayer：全局常驻氛围背景音乐，按页面切曲（星表 / 演化 各有专属曲，其余页面共用 COBALT）
+// BgmPlayer：氛围背景音乐，按页面切曲（星表 / 演化 各有专属曲，旅程与我的星表共用 COBALT）
+// 星系页与光谱页无配乐：这两页靠 3D 视差与光谱动画自身的节奏叙事，叠音乐会抢注意力，SOUND 按钮也一并隐藏
 // 曲目为 CC BY 4.0 素材，署名见 README
 // 自动播放：加载后立即尝试；被浏览器策略拦截时，等待第一次用户交互（滚动/点击等）自动开始
-// 指示器：导航栏右侧 SOUND 按钮——播放中 3 条跳动波形，点击可暂停/恢复
+// 指示器：导航栏右侧 SOUND 按钮——播放中 3 条跳动波形，点击可暂停/恢复（手动关声后不再自动起播）
 // 切页换曲：淡出 0.45s → 换源 → 淡入 0.9s，避免硬切的突兀感；同曲不重启
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
@@ -19,9 +20,12 @@ const T_CATALOG: Track = { src: voyager, loopStart: 0, label: 'VOYAGER' }
 // 演化：SUNRISE ON MARS —— 日出/新生意象，呼应恒星从诞生到死亡的时间轴
 const T_EVOLUTION: Track = { src: sunriseOnMars, loopStart: 0, label: 'SUNRISE ON MARS' }
 
-const trackFor = (pathname: string): Track => {
+// 返回 null 表示该页无配乐（星系 / 光谱）
+const trackFor = (pathname: string): Track | null => {
   if (pathname.startsWith('/catalog')) return T_CATALOG
   if (pathname.startsWith('/evolution')) return T_EVOLUTION
+  if (pathname.startsWith('/galaxy')) return null
+  if (pathname.startsWith('/spectrum')) return null
   return T_DEFAULT
 }
 
@@ -50,9 +54,12 @@ export default function BgmPlayer() {
   const gainRef = useRef<GainNode | null>(null)
   const playingRef = useRef(false)
   const readyRef = useRef(false)
-  const trackRef = useRef<Track>(T_DEFAULT) // 当前曲目
-  const srcRef = useRef('')                 // 已赋给 audio.src 的资源
+  const mutedRef = useRef(false)                   // 用户手动关过 SOUND：不再自动起播
+  const trackRef = useRef<Track | null>(T_DEFAULT) // 当前曲目，null = 无配乐页
+  const srcRef = useRef('')                        // 已赋给 audio.src 的资源
+  const timerRef = useRef(0)                       // 换曲/停播延时器
   const [playing, setPlaying] = useState(false)
+  const track = trackFor(pathname)                 // 本页曲目（null 时不渲染 SOUND 按钮）
 
   // 音量渐变（走 GainNode：元素接 MediaElementSource 后音量由增益控制）
   const rampVolume = (target: number, time: number) => {
@@ -64,19 +71,23 @@ export default function BgmPlayer() {
     g.gain.linearRampToValueAtTime(target, ctx.currentTime + time)
   }
 
+  const setPlay = (v: boolean) => {
+    playingRef.current = v
+    setPlaying(v)
+  }
+
   const onStarted = () => {
-    playingRef.current = true
-    setPlaying(true)
+    setPlay(true)
     rampVolume(VOLUME, 1.1)
   }
 
-  // 确保音频就绪后从当前曲目的循环起点开始播放
+  // 确保音频就绪后从当前曲目的循环起点开始播放；无配乐页或用户已关声则什么都不做
   const ensureAndPlay = () => {
     const audio = audioRef.current
-    if (!audio || playingRef.current) return
+    const t = trackRef.current
+    if (!audio || !t || mutedRef.current || playingRef.current) return
     const ctx = audioCtxRef.current
     if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {})
-    const t = trackRef.current
     if (srcRef.current !== t.src) {
       srcRef.current = t.src
       audio.src = t.src
@@ -116,15 +127,19 @@ export default function BgmPlayer() {
 
     const onEnded = () => {
       // 循环：跳回本曲循环起点无缝续播
-      audio.currentTime = trackRef.current.loopStart
+      const t = trackRef.current
+      if (!t) return
+      audio.currentTime = t.loopStart
       audio.play().catch(() => {})
     }
     audio.addEventListener('ended', onEnded)
 
-    // 预加载，不等手势（按当前路由选曲）
+    // 预加载，不等手势（按当前路由选曲；无配乐页不加载）
     trackRef.current = trackFor(pathname)
-    srcRef.current = trackRef.current.src
-    audio.src = trackRef.current.src
+    if (trackRef.current) {
+      srcRef.current = trackRef.current.src
+      audio.src = trackRef.current.src
+    }
 
     // 直接尝试播放；被拦截则等首次用户交互
     ensureAndPlay()
@@ -137,42 +152,66 @@ export default function BgmPlayer() {
       audio.pause()
       audioRef.current = null
       playingRef.current = false
+      window.clearTimeout(timerRef.current)
       ctx.close().catch(() => {})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 路由变化 → 换曲（淡出换源淡入）；同曲不重启，避免切页打断音乐
+  // 路由变化 → 换曲（淡出换源淡入）；同曲不重启；进入无配乐页则淡出停住
   useEffect(() => {
     const next = trackFor(pathname)
-    if (next.src === trackRef.current.src) return
+    if (next === trackRef.current) return // 同一曲目（含两页都无配乐）
     trackRef.current = next
-    srcRef.current = next.src
-    readyRef.current = false
     const audio = audioRef.current
     if (!audio) return
-    // 已静音：只换源不起播，等用户按 SOUND 时再走 ensureAndPlay
-    if (!playingRef.current) {
-      audio.pause()
-      audio.src = next.src
+    window.clearTimeout(timerRef.current)
+
+    // 正在出声先淡出再执行；本就静默则立即执行
+    const afterFadeOut = (fn: () => void) => {
+      if (!playingRef.current) {
+        fn()
+        return
+      }
+      setPlay(false)
+      rampVolume(0, 0.45)
+      timerRef.current = window.setTimeout(fn, 480)
+    }
+
+    // 星系 / 光谱：无配乐，淡出后停住（源保留，回到有曲页可立即续）
+    if (!next) {
+      afterFadeOut(() => audioRef.current?.pause())
       return
     }
-    rampVolume(0, 0.45)
-    const timer = window.setTimeout(() => {
+
+    afterFadeOut(() => {
       const a = audioRef.current
-      if (!a || trackRef.current.src !== next.src) return
-      a.pause()
-      a.src = next.src
-      a.currentTime = next.loopStart
-      const go = () => {
-        if (!playingRef.current || trackRef.current.src !== next.src) return
-        a.play().then(() => rampVolume(VOLUME, 0.9)).catch(() => {})
+      if (!a || trackRef.current !== next) return
+      const swapped = srcRef.current !== next.src
+      if (swapped) {
+        srcRef.current = next.src
+        readyRef.current = false
+        a.src = next.src
       }
-      if (a.readyState >= 1) go()
-      else a.addEventListener('loadedmetadata', go, { once: true })
-      a.load()
-    }, 470)
-    return () => window.clearTimeout(timer)
+      // 用户关着声：只换源不起播，等他按 SOUND
+      if (mutedRef.current) return
+      const go = () => {
+        if (trackRef.current !== next || mutedRef.current) return
+        a.currentTime = next.loopStart
+        a.play()
+          .then(() => {
+            setPlay(true)
+            rampVolume(VOLUME, 0.9)
+          })
+          .catch(() => {})
+      }
+      if (!swapped && a.readyState >= 1) go()
+      else {
+        a.addEventListener('loadedmetadata', go, { once: true })
+        a.load()
+      }
+    })
+    return () => window.clearTimeout(timerRef.current)
   }, [pathname])
 
   // 点击：暂停（快速淡出）或恢复
@@ -180,17 +219,21 @@ export default function BgmPlayer() {
     const audio = audioRef.current
     if (!audio) return
     if (playingRef.current) {
-      playingRef.current = false
-      setPlaying(false)
+      mutedRef.current = true // 手动关声：后续手势/切页都不再自作主张起播
+      setPlay(false)
       rampVolume(0, 0.25)
-      setTimeout(() => {
+      timerRef.current = window.setTimeout(() => {
         const a = audioRef.current
         if (a && !playingRef.current) a.pause()
       }, 280)
     } else {
+      mutedRef.current = false
       ensureAndPlay()
     }
   }
+
+  // 无配乐页不渲染 SOUND 按钮（没有可控的声音，摆个死按钮反而让人误以为坏了）
+  if (!track) return null
 
   return (
     <>
@@ -207,7 +250,7 @@ export default function BgmPlayer() {
         style={{ ...btnStyle, position: 'fixed', top: 11, right: 24, zIndex: 101 }}
         onClick={toggle}
         aria-label={playing ? 'pause sound' : 'play sound'}
-        title={`BGM · ${trackRef.current.label}`}
+        title={`BGM · ${track.label}`}
       >
         <span style={{ fontSize: '0.78em', lineHeight: 1 }}>{playing ? '❚❚' : '▶'}</span>
         SOUND
